@@ -9,7 +9,7 @@ import sys
 import pickle
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -658,6 +658,6 @@ def main(_):
 
         print("FINISHED~")
 
-
+tf.compat.v1.disable_eager_execution()
 if __name__ == '__main__':
     tf.app.run()
