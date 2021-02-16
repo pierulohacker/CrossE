@@ -1,15 +1,14 @@
+#nelle impostazioni di pycharm (Run -> Edit configurations) sono specificati i parametri di esecuzione
 import argparse
 import math
 import os
 import os.path
+import pickle
 import timeit
 from multiprocessing import JoinableQueue, Queue, Process
-from collections import defaultdict
-import sys
-import pickle
 
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow._api.v2.compat.v1 as tf
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -528,8 +527,11 @@ def main(_):
                 raw_training_data_queue.put(dat)
                 nbatches_count += 1
             print("raw training data initialized.")
-
+            total_batch = nbatches_count #batch size
+            print("Stampa di conteggio ogni 100 elmenti:")
             while nbatches_count > 0:
+                if nbatches_count%100 == 0:
+                    print(f"{nbatches_count} da processare su un batch di {total_batch}")
                 nbatches_count -= 1
 
                 hr_tlist, hr_tweight, tr_hlist, tr_hweight = training_data_queue.get()
