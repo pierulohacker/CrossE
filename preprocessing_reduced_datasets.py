@@ -124,7 +124,7 @@ def main_reduce_datasets(data_path, dataset_name, fraction_to_remove):
     relations = reset_ids(relations)  # riorganizzazione degli id
     print(f"relations  of {dataset_name} after removal: {len(relations)}")
 
-    save_dir = data_path + "reduced/"
+    save_dir = f"{data_path}reduced{fraction_to_remove}/" #to save a subfolder with the fraction used
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     train.to_csv(save_dir + 'train.txt', sep='\t', header=None, index=None)
     test.to_csv(save_dir + 'test.txt', sep='\t', header=None, index=None)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     for name in os.listdir(datasets_dir):
         dir = f"{datasets_dir}{name}/"
         print(dir)
-        process_list.append(Process(target=main_reduce_datasets, args=(dir, name, 1.5)))
+        process_list.append(Process(target=main_reduce_datasets, args=(dir, name, 1.1)))
         process_list[-1].start() #start the last appended process
 
     for process in process_list:
