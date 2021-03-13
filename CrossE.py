@@ -550,13 +550,17 @@ def main(_):
                         default=50)
     parser.add_argument('--output_rank', dest='output_rank', type=bool, help='output the result rank or not',
                         default=False)
+    parser.add_argument('--log_level', dest='log_level', type=str, help='set the logging level, choose between info or debug',
+                        default="info")
 
     args = parser.parse_args()
     # creating the folder for logs
     log_save_dir = f"{args.save_dir}execution_logs"  # to save a subfolder with the fraction used
     Path(log_save_dir).mkdir(parents=True, exist_ok=True)
-    log = Log.get_logger(logs_dir=log_save_dir)
-    # log.basicConfig(filename=log_filename, level=log.NOTSET)
+    if args.log_level == "debug":
+        log = Log.get_logger(logs_dir=log_save_dir, level=Log.Levels.DEBUG)
+    else:
+        log = Log.get_logger(logs_dir=log_save_dir)
 
     log.info(args)
     log.info("DATASET: %s" % args.data_dir)
