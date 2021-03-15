@@ -294,13 +294,13 @@ class CrossE:
 
             # shape (?, dim)
             hr_tlist_hr = hr_tlist_h * h_weight + hr_tlist_r * hr_tlist_h * h_weight
-            # TODO: controllare, potrebbe essere l'operatore di score
+            # operatore di score f(h,r,t) prima del sigmoide
             hrt_res = tf.matmul(tf.nn.dropout(tf.tanh(hr_tlist_hr + self.__hr_combination_bias), self.__dropout),
                                 self.__ent_embedding,
                                 transpose_b=True)
 
             tr_hlist_tr = tr_hlist_t * t_weight + tr_hlist_r * tr_hlist_t * t_weight
-
+            # operatore di score f(t,r^-1,h) prima del sigmoide
             trh_res = tf.matmul(tf.nn.dropout(tf.tanh(tr_hlist_tr + self.__tr_combination_bias), self.__dropout),
                                 self.__ent_embedding,
                                 transpose_b=True)
@@ -310,7 +310,7 @@ class CrossE:
                 regularizer_loss += tf.reduce_sum(tf.abs(param))
             self.regularizer_loss = regularizer_loss
 
-            hrt_res_sigmoid = tf.sigmoid(hrt_res)
+            hrt_res_sigmoid = tf.sigmoid(hrt_res) # the sigma operator of the paper, applied to tanh...
 
             hrt_loss = -tf.reduce_sum(
                 tf.log(tf.clip_by_value(hrt_res_sigmoid, 1e-10, 1.0)) * tf.maximum(0., hr_tlist_weight)
@@ -327,6 +327,12 @@ class CrossE:
             return hrt_loss + trh_loss + regularizer_loss * regularizer_weight
 
     def test(self, inputs, scope=None):
+        """
+        Run testing process for the provided inputs (useful for validation; test_evaluation function compute the
+        final testing phase), using the matrices created in the model which contains embeddings of entities and
+        relationships; compute the scores for normal triples (h, r, t) and inverted triples (t, r^-1,
+        h); this function is called by train_ops :param inputs: :param scope: :return: head_ids and train_ids
+        """
         with tf.variable_scope(scope or type(self).__name__) as scp:
             scp.reuse_variables()
 
@@ -337,19 +343,19 @@ class CrossE:
             h_w = tf.nn.embedding_lookup(self.__h_weighted_vector, inputs[:, 2])
             t_w = tf.nn.embedding_lookup(self.__t_weighted_vector, inputs[:, 2])
 
-            ent_mat = tf.transpose(self.__ent_embedding)
+            ent_mat = tf.transpose(self.__ent_embedding) #entity matrix transposed
 
             # predict tails
             hr = h * h_w + r * h * h_w
 
-            hrt_res = tf.sigmoid(tf.matmul(tf.tanh(hr + self.__hr_combination_bias), ent_mat))
-            _, tail_ids = tf.nn.top_k(hrt_res, k=self.__n_entity)
+            hrt_res = tf.sigmoid(tf.matmul(tf.tanh(hr + self.__hr_combination_bias), ent_mat)) #results of the ranking
+            _, tail_ids = tf.nn.top_k(hrt_res, k=self.__n_entity) # ids of the top k tails for the tail prediction
 
             # predict heads
             tr = t * t_w + r_reverse * t * t_w
 
             trh_res = tf.sigmoid(tf.matmul(tf.tanh(tr + self.__tr_combination_bias), ent_mat))
-            _, head_ids = tf.nn.top_k(trh_res, k=self.__n_entity)
+            _, head_ids = tf.nn.top_k(trh_res, k=self.__n_entity) # ids of the top k heads for the head prediction
 
             return head_ids, tail_ids
 
@@ -397,7 +403,7 @@ def test_ops(model: CrossE):
 
 def worker_func(in_queue: JoinableQueue, out_queue: Queue, hr_t, tr_h):
     """
-    Uses the data contained in the in_queue to run evaluation and put the results into the out_queue
+    Uses the data contained in the in_queue to run test evaluation and put the results into the out_queue
     :param in_queue: input queue, empty at the beginning, but it will contain (testing_data, head_pred, tail_pred during
     testing phase), or None
     :param out_queue: output queue that will contain the results of the testing phase: (mean_rank_h, filtered_mean_rank_h),
@@ -462,6 +468,16 @@ def data_generator_func(in_queue: JoinableQueue, out_queue: Queue, train_tr_h, t
 
 
 def test_evaluation(testing_data, head_pred, tail_pred, hr_t, tr_h):
+    """
+    Perform the evaluation of the performances of the model over the test data
+    :param testing_data: data on which run the evaluation
+    :param head_pred: predictions for the queries (t, r^-1, ?)
+    :param tail_pred: predictions for the queries (h, r, t)
+    :param hr_t: nested dictionary obtained with the function gen_hr_t contained in the __init__ of class CrossE
+    :param tr_h: nested dictionary obtained with the function gen_tr_h contained in the __init__ of class CrossE
+    :return:
+    """
+    # TODO: inserire qui il processo di generazione delle spiegazioni
     assert len(testing_data) == len(head_pred)
     assert len(testing_data) == len(tail_pred)
 
@@ -592,7 +608,7 @@ def main(_):
         # TODO: capire come accedere ai tensori
         if args.load_model is not None:
             saver.restore(session, args.load_model)
-            # extracts, from the checkpoint filename, the iteration number to continue from
+            # extracts, from the checkpoint filename, the iteration number, sum it 1 and use it to resume training
             iter_offset = int(args.load_model.split('.')[-2].split('_')[-1]) + 1
             log.info("Load model from %s, iteration %d restored." % (args.load_model, iter_offset))
 
@@ -609,7 +625,7 @@ def main(_):
             data_generators[-1].start()  # starts the last process appendend in each iteration
 
         evaluation_queue = JoinableQueue()
-        result_queue = Queue()
+        result_queue = Queue()  # output queue of the results of the testing phase
         workers = list()
         for i in range(args.n_worker):
             workers.append(Process(target=worker_func, args=(evaluation_queue, result_queue, model.hr_t, model.tr_h)))
@@ -665,6 +681,7 @@ def main(_):
 
             if (n_iter % args.eval_per == 0 and n_iter != 0) or n_iter == args.max_iter - 1:
                 for data_func, test_type in zip([model.valid_data, model.testing_data], ['valid', 'TEST']):
+                    # TODO: qui si calcoleranno le performances finali per le  spiegazioni
                     accu_mean_rank_h = list()
                     accu_mean_rank_t = list()
                     accu_mrr_h = list()
