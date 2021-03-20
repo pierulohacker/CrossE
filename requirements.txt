@@ -1,10 +1,12 @@
 absl-py==0.11.0
+asttokens==2.0.4
 astunparse==1.6.3
 cachetools==4.2.1
 certifi==2020.12.5
 chardet==4.0.0
 colorama==0.4.4
 colorlog==4.7.2
+executing==0.5.4
 flatbuffers==1.12
 future==0.18.2
 gast==0.3.3
@@ -26,6 +28,7 @@ pandas==1.2.2
 pathlib==1.0.1
 pendulum==2.1.2
 protobuf==3.14.0
+pure-eval==0.1.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 python-dateutil==2.8.1
@@ -42,6 +45,7 @@ tensorflow-estimator==2.4.0
 termcolor==1.1.0
 typing-extensions==3.7.4.3
 urllib3==1.26.3
+varname==0.6.3
 Werkzeug==1.0.1
 win-unicode-console==0.4
 wrapt==1.12.1
