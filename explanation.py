@@ -470,15 +470,25 @@ def main():
     paths_dictionary = manager.dict()
     jobs = []
     # {num_tripla: {num_predizione: {paths} } }
+    max_processes = 20
+    actual_processes = 0
     for num_tripla in range(0, len(fb15k.test_triples)):
         p = multiprocessing.Process(target=main_process, args=(fb15k, num_tripla, explainer, paths_dictionary))
         jobs.append(p)
         p.start()
+        actual_processes += 1
         #paths_dictionary[num_tripla] = paths_for_pred
-    for proc in jobs:
-        proc.join()
-    # print(paths_dictionary)
-    with open("exlanations.pkl", "wb") as f:
+        if actual_processes == max_processes:
+            for proc in jobs:
+                proc.join()
+            actual_processes = 0
+            jobs = []
+
+    if jobs: # se ce ne sono ancora da concludere
+        for proc in jobs:
+            proc.join()
+    print("Completata la generazione delle spiegazioni.\nSerializzazione in corso...")
+    with open("explanations.pkl", "wb") as f:
         pickle.dump(paths_dictionary, f)
     print("Spiegazioni salvate.")
     print()
