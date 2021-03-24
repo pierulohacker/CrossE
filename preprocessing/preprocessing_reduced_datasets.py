@@ -149,7 +149,7 @@ if __name__ == "__main__":
     for name in os.listdir(datasets_dir):
         dir = f"{datasets_dir}{name}/"
         print(dir)
-        process_list.append(Process(target=main_reduce_datasets, args=(dir, name, 1.1)))
+        process_list.append(Process(target=main_reduce_datasets, args=(dir, name, 1.01)))
         process_list[-1].start() #start the last appended process
 
     for process in process_list:
