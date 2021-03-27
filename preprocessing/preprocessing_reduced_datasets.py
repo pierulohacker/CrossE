@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import pandas as pd
@@ -141,10 +142,13 @@ if __name__ == "__main__":
     in order to remove them also from train, dev, and test sets; then, remove all the relations (from the file relation2id)
     that are not anymore in none of the sets (train, dev, test)
     """
-    datasets_dir = 'datasets/'
-    """name = "FB15K"
-    dir = f"{datasets_dir}{name}/"
-    main_reduce_datasets(dir, name, 2)"""
+    parser = argparse.ArgumentParser(description='Reduction of datasets for toy executions')
+
+    parser.add_argument('--data', dest='data_dir', type=str,
+                        help="Data folder containing the data")
+    args = parser.parse_args()
+    datasets_dir = args.data_dir
+
     process_list = []
     for name in os.listdir(datasets_dir):
         dir = f"{datasets_dir}{name}/"
@@ -154,4 +158,4 @@ if __name__ == "__main__":
 
     for process in process_list:
         process.join()
-    print("All the dataset have been reduced!")
+    print("All the dataset have been reduced! ~ FINISH.")

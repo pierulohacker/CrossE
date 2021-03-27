@@ -1,0 +1,15 @@
+<http://dbpedia.org/ontology/cinematography>	0
+<http://dbpedia.org/ontology/countySeat>	1
+<http://dbpedia.org/ontology/editing>	2
+<http://dbpedia.org/ontology/foundedBy>	3
+<http://dbpedia.org/ontology/governmentType>	4
+<http://dbpedia.org/ontology/isPartOf>	5
+<http://dbpedia.org/ontology/largestCity>	6
+<http://dbpedia.org/ontology/musicalArtist>	7
+<http://dbpedia.org/ontology/musicalBand>	8
+<http://dbpedia.org/ontology/producer>	9
+<http://dbpedia.org/ontology/starring>	10
+<http://dbpedia.org/ontology/type>	11
+<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>	12
+<http://www.w3.org/2000/01/rdf-schema#seeAlso>	13
+<http://www.w3.org/2002/07/owl#differentFrom>	14

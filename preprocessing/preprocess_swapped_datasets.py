@@ -21,7 +21,7 @@ def load_dataset(data_path) -> pd.DataFrame():
 
 if __name__ == "__main__":
     #it will save in the same folder, so copy the original dataset as backup
-    path = "datasets/FB15k-237-swapped/"
+    path = "../datasets/FB15k-237-swapped/"
     train, test, valid = load_dataset(path)
     columns_in_order = ["head", "tail", "rel"]
     train = train.reindex(columns=columns_in_order)
