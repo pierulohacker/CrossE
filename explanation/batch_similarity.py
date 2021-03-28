@@ -20,7 +20,7 @@ def load_data(pickle_folder: str):
     with open(file_path, 'rb') as f:
         entity_emb = pickle.load(f)
 
-    file_path = f"{pickle_folder}\{file_names[1]}"
+    file_path = f"{pickle_folder}{file_names[1]}"
     with open(file_path, 'rb') as f:
         rel_emb = pickle.load(f)
 
@@ -83,7 +83,8 @@ if __name__ == '__main__':
                         help="Data folder containing the output of the training phase (pickle_files")
 
     parser.add_argument('--save_dir', dest='save_dir', type=str,
-                        help='directory to save in the similarity data',
+                        help='directory to save in the similarity data; default will be set to the same folder the data'
+                             'are loaded from.',
                         default='data_dir')
     global args
     args = parser.parse_args()
@@ -101,7 +102,7 @@ if __name__ == '__main__':
     sim_inv_rel = compute_sim_dictionary(inv)
 
     save_data(sim_ent, save_path=f"{data_folder}/", filename="sim_entities.pkl")
-    save_data(sim_rel, save_path=f"{data_folder}/", filename="/sim_rel.pkl")
+    save_data(sim_rel, save_path=f"{data_folder}/", filename="sim_rel.pkl")
     save_data(sim_inv_rel, save_path=f"{data_folder}/", filename="sim_inv_rel.pkl")
 
     print()
