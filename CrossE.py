@@ -14,7 +14,6 @@ from varname import nameof
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-
 class CrossE:
     """trainable variables of the model (it's just a declaration for documentation purposes)"""
     # Matrices
@@ -664,12 +663,9 @@ def compute_results(model: CrossE, session: tf.Session, batch: int, test_head, t
         # reset the files of previous executions
         if test_type == 'TEST' and n_iter == max_iter - 1:
             save_pred_flag = True
-            with open(out_save_path_pred_head, "wb+") as f:
-                f.seek(0)
-                f.truncate()
-            with open(out_save_path_pred_tails, "wb+") as f:
-                f.seek(0)
-                f.truncate()
+
+            head_predictions = []
+            tails_predictions = []
         # prende un batch di validation o test,  a seconda della funzione in data_func; prende un batch di embeddings
 
         for testing_data in data_func(batch_size=batch):
@@ -684,16 +680,35 @@ def compute_results(model: CrossE, session: tf.Session, batch: int, test_head, t
             head_pred, tail_pred = session.run([test_head, test_tail],
                                                {test_input: testing_data})
 
+
+            #print(f"Head predictions {head_pred.shape}")
+            #print(f"Tail predictions {tail_pred.shape}")
+
             if save_pred_flag:
+                """file = open(out_save_path_pred_head, "rb")
+                old_head_pred = pickle.load(file)
+                file.close()
+
+                file = open(out_save_path_pred_tails, "rb")
+                old_tail_pred = pickle.load(file)
+                file.close()
                 # append the head predictions
-                with open(out_save_path_pred_head, "ab") as f:
-                    pickle.dump(head_pred, f)
+                with open(out_save_path_pred_head, "wb") as f:
+                    pickle.dump(old_head_pred + head_pred, f)
+                    #pickle.dump(head_pred, f)
                 # append the tail predictions
-                with open(out_save_path_pred_tails, "ab") as f:
-                    pickle.dump(tail_pred, f)
-                log.info(f"Predictions for the testing triples serialized to\n "
+                with open(out_save_path_pred_tails, "wb") as f:
+                    #pickle.dump(tail_pred, f)
+                    pickle.dump(old_tail_pred + tail_pred, f)"""
+                # print("Concatenazione")
+                # print(type(head_pred))
+                for h_p in head_pred:
+                    head_predictions.append(h_p)
+                for t_p in tail_pred:
+                    tails_predictions.append(t_p)
+                """log.info(f"Predictions for the testing triples serialized to\n "
                          f"- '{out_save_path_pred_head}' for head predictions\n"
-                         f"- '{out_save_path_pred_tails}' for tail predictions")
+                         f"- '{out_save_path_pred_tails}' for tail predictions")"""
             evaluation_queue.put((testing_data, head_pred, tail_pred))
             # evaluation_queue.put((testing_data, head_pred, tail_pred))
             evaluation_count += 1
@@ -762,6 +777,15 @@ def compute_results(model: CrossE, session: tf.Session, batch: int, test_head, t
                       np.asarray(accu_mean_rank_h, dtype=np.int32) < 1]),
              np.mean([np.asarray(accu_filtered_mean_rank_t, dtype=np.int32) < 1,
                       np.asarray(accu_filtered_mean_rank_h, dtype=np.int32) < 1])))
+
+    # print(f"Head predictions = {len(head_predictions)}")
+    # print(f"Tail predictions = {len(tails_predictions)}")
+    with open(out_save_path_pred_head, "wb+") as f:
+        pickle.dump(head_predictions, f)
+    with open(out_save_path_pred_tails, "wb+") as f:
+        pickle.dump(tails_predictions, f)
+
+
 
 
 def main(args):
@@ -879,7 +903,7 @@ def main(args):
                                        os.path.join(args.save_dir,
                                                     "CrossE_" + str(args.prefix) + "_" + str(n_iter) + ".ckpt"))
                 log.info("Model saved at %s" % save_path)
-            # compute evaluation every 'evel_per' times or after the last training iteration
+            # compute evaluation every 'eval_per' times or after the last training iteration
             if (n_iter % args.eval_per == 0 and n_iter != 0) or (iter_offset == args.max_iter - 1):
                 compute_results(model, session, args.eval_batch, test_head, test_tail, test_input, evaluation_queue,
                                 args.n_worker, result_queue, n_iter, args.max_iter, args.output_rank)
