@@ -3,6 +3,7 @@ Compute in batch the similarity between each entity and the similarity between e
 to speed up the explanation process
 """
 import argparse
+import multiprocessing
 from pathlib import Path
 import pickle
 import numpy as np
@@ -31,7 +32,7 @@ def load_data(pickle_folder: str):
     return entity_emb, rel_emb, inv_rel_emb
 
 
-def __top_sim_emb(emb, emb_id, embedding_matrix):
+def __top_sim_emb(emb, emb_id, embedding_matrix, first_n=15):
     """
     Compute the euclidean distance between an embedding of the triple (head, relation, or tail)
     and all the other embeddings of the same kind of objects set for wich embeddings are provided
@@ -39,6 +40,8 @@ def __top_sim_emb(emb, emb_id, embedding_matrix):
     :param emb_id: id of the object of the KG, useful to exlude it from the comparison
     :param emb: relationship of the test triple to compare with the other relationships
     :param embedding_matrix: embeddings of the entities/relationships in the KG
+    :param first_n: number of top similar embeddings ids to keep, it helps to reduce the size required to store files; also
+    the explnation experiments does not require all the ids, but only the first (at most 15) will be used
     :return: list of ids of the top_k most similar objects to emb
     """
     distances = {}  # dizionario {id: distanza dall'emb, id: distanza,...}
@@ -49,10 +52,10 @@ def __top_sim_emb(emb, emb_id, embedding_matrix):
             distances[i] = dst
     sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
     ids = list(sorted_dict.keys())
-    return ids
+    return ids[:first_n]
 
 
-def compute_sim_dictionary(embeddings: list):
+def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name):
     """
     Compute the similarity between each element in the embedding list
     :param embeddings: embeddings list in the form [[emb1], [emb2], ...]
@@ -61,7 +64,7 @@ def compute_sim_dictionary(embeddings: list):
     similarity_dictionary = {}
     for emb_id in range(0, len(embeddings)):
         similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings)
-    return similarity_dictionary
+    dict_multiproc[proc_name] = similarity_dictionary
 
 
 def save_data(sim_dict, save_path, filename):
@@ -94,12 +97,31 @@ if __name__ == '__main__':
     if save_dir == 'data_dir':
         save_dir = data_folder
     ent, rel, inv = load_data(data_folder)
+    manager1 = multiprocessing.Manager()
+    return_dict = manager1.dict()
+
+
+    processes_list = []
     print("Computing similarity between entities")
-    sim_ent = compute_sim_dictionary(ent)
+    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent"))
+    processes_list.append(p1)
+    p1.start()
     print("Computing similarity between relationships")
-    sim_rel = compute_sim_dictionary(rel)
+    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel"))
+    processes_list.append(p2)
+    p2.start()
     print("Computing similarity between inverse relationships")
-    sim_inv_rel = compute_sim_dictionary(inv)
+    p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv"))
+    processes_list.append(p3)
+    p3.start()
+
+    for proc in processes_list:
+        proc.join()
+
+    sim_ent = return_dict['ent']
+    sim_rel = return_dict['rel']
+    sim_inv_rel = return_dict['inv']
+
 
     save_data(sim_ent, save_path=f"{data_folder}/", filename="sim_entities.pkl")
     save_data(sim_rel, save_path=f"{data_folder}/", filename="sim_rel.pkl")
