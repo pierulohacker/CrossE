@@ -64,7 +64,9 @@ of the original paper of CrossE. To execute the explanation process it is necess
    - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/`
    
 5. Run the explanation process
-- for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/`
+   - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/`
+   
+   - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/`
 
 ## CITE
 
