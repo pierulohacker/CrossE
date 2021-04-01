@@ -7,7 +7,6 @@ import multiprocessing
 from pathlib import Path
 import pickle
 import numpy as np
-from global_logger import Log
 
 
 def load_data(pickle_folder: str):
@@ -126,5 +125,6 @@ if __name__ == '__main__':
     save_data(sim_ent, save_path=f"{data_folder}/", filename="sim_entities.pkl")
     save_data(sim_rel, save_path=f"{data_folder}/", filename="sim_rel.pkl")
     save_data(sim_inv_rel, save_path=f"{data_folder}/", filename="sim_inv_rel.pkl")
+    print(f"All data  stored in {data_folder}")
 
     print()
