@@ -683,6 +683,7 @@ if __name__ == '__main__':
     log.info("LOG LEVEL: %s" % args.log_level)
     log.info("PROCESSES: %d" % args.max_processes)
     log.info("SAVE DIR: %s" % args.save_dir)
+    log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
     start_time = time.time()  # better for windows, more accuracy
     main()
     log.debug("--- %s seconds ---" % (time.time() - start_time))
