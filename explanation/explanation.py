@@ -113,15 +113,16 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__train_tr_h = pickle.load(f)
 
-        file_path = pickles_path + file_names[10]
+        similarity_data_path = f"{pickles_path}{args.distance_type}/"
+        file_path = similarity_data_path + file_names[10]
         with open(file_path, 'rb') as f:
             self.__entity_id_sim = pickle.load(f)
 
-        file_path = pickles_path + file_names[11]
+        file_path = similarity_data_path + file_names[11]
         with open(file_path, 'rb') as f:
             self.__relation_id_sim = pickle.load(f)
 
-        file_path = pickles_path + file_names[12]
+        file_path = similarity_data_path + file_names[12]
         with open(file_path, 'rb') as f:
             self.__inv_rel_id_sim = pickle.load(f)
 
@@ -667,6 +668,10 @@ if __name__ == '__main__':
                         help='percentage of the predictions to take into account for each test triple',
                         default=2)
 
+    parser.add_argument('--distance', dest='distance_type', type=str,
+                        help='choose the pre-computed distance/similarity to involve: euclidian, cosine',
+                        default='euclidian')
+
     global args
     args = parser.parse_args()
     log_save_dir = f"{args.save_dir}execution_logs"  # to save a subfolder with the fraction used
@@ -684,6 +689,7 @@ if __name__ == '__main__':
     log.info("PROCESSES: %d" % args.max_processes)
     log.info("SAVE DIR: %s" % args.save_dir)
     log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
+    log.info("DISTANCE TYPE: %s" % args.distance_type)
     start_time = time.time()  # better for windows, more accuracy
     main()
     log.debug("--- %s seconds ---" % (time.time() - start_time))

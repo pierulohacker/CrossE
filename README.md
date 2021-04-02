@@ -19,7 +19,7 @@ for **WN18**: `python3 CrossE.py --batch 2048 --data datasets/WN18/ --dim 100 --
 
 for **DBpedia15k** `python3 CrossE.py --batch 4000 --data datasets/DBpedia15k/ --dim 100 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15k/`
 
-for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15kYAGO/`
+for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpediaYAGO/`
 
 
 python3 CrossE.py --batch 4000 --data datasets/FB15k-237-swapped/ --dim 100 --eval_per 20 --load_model ./save/FB15k-237-swapped/CrossE_DEFAULT_499.ckpt --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/FB15k-237-swapped/
@@ -34,6 +34,8 @@ for **FB15k**: `python3 CrossE.py --batch 4000 --data datasets/FB15k/ --dim 300 
 for **WN18**: `python3 CrossE.py --batch 2048 --data datasets/WN18/ --dim 100 --eval_per 20 --loss_weight 1e-4 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/WN18/ --load_model ./save/WN18/CrossE_DEFAULT_460.ckpt`
 
 for **DBpedia15k** `python3 CrossE.py --batch 4000 --data datasets/DBpedia15k/ --dim 100 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15k/ --load_model ./save/save_DBpedia15k/CrossE_DEFAULT_160.ckpt`
+
+for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpediaYAGO/ --load_model ./save/save_DBpediaYAGO/CrossE_DEFAULT_20.ckpt`
 
 
 **Pay attention to the checkpoint file to specify:** in the save folder, you'll see files like these
@@ -55,25 +57,48 @@ of the original paper of CrossE. To execute the explanation process it is necess
    - for **DBpedia15k** `python3 CrossE.py --batch 4000 --data datasets/DBpedia15k/ --dim 100 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15k/ --load_model ./save/save_DBpedia15k/CrossE_DEFAULT_499.ckpt`
    
 4. Run the batch_similarity.py file
-   - for **FB15k-237**: `python3 explanation/batch_similarity.py --data ./save/FB15k-237-swapped/out_data/pickle/`
-     
-   - for **WN18**: `python3 explanation/batch_similarity.py  --data ./save/WN18/out_data/pickle/`
-     
-   - for **DBpedia15k** `python3 explanation/batch_similarity.py  --data ./save/save_DBpedia15k/out_data/pickle/`
+   - EUCLIDIAN DISTANCE (standard)
+      - for **FB15k-237**: `python3 explanation/batch_similarity.py --data ./save/FB15k-237-swapped/out_data/pickle/`
+        
+      - for **WN18**: `python3 explanation/batch_similarity.py  --data ./save/WN18/out_data/pickle/`
+        
+      - for **DBpedia15k** `python3 explanation/batch_similarity.py  --data ./save/save_DBpedia15k/out_data/pickle/`
+      
+      - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/`
    
-   - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/`
+   - COSINE SIMILARITY
+      
+      - for **FB15k-237**: `python3 explanation/batch_similarity.py --data ./save/FB15k-237-swapped/out_data/pickle/ --distance cosine`
+        
+      - for **WN18**: `python3 explanation/batch_similarity.py  --data ./save/WN18/out_data/pickle/ --distance cosine`
+        
+      - for **DBpedia15k** `python3 explanation/batch_similarity.py  --data ./save/save_DBpedia15k/out_data/pickle/ --distance cosine`
+      
+      - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/ --distance cosine`
    
 5. Run the explanation process
-   - 2% of predictions (is default):
+    - 2% of predictions (is default):
+        - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/2perc/`
       
-      - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/`
+        - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/2perc/`
    
-      - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/`
+        - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/2perc/`
+      
+        - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/2perc/`
    
-   - 5% of predictions
-      - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/ --predictions_perc 5`
+        - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/2perc/`
+
+    - 5% of predictions
+        - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/5perc/ --predictions_perc 5`
+      
+        - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/5perc/ --predictions_perc 5`
    
-      - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/ --predictions_perc 5`
+        - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/5perc/ --predictions_perc 5`
+      
+        - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/5perc/ --predictions_perc 5`
+   
+        - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/5perc/ --predictions_perc 5`
+
 ## CITE
 
 If the codes help you or the paper inspire your, please cite following paper:

@@ -7,6 +7,9 @@ import multiprocessing
 from pathlib import Path
 import pickle
 import numpy as np
+from numpy import dot
+from numpy.linalg import norm
+
 
 
 def load_data(pickle_folder: str):
@@ -30,8 +33,24 @@ def load_data(pickle_folder: str):
 
     return entity_emb, rel_emb, inv_rel_emb
 
+def __euclidian(a,b):
+    """
+    Computes euclidian distance between two lists
+    :return: distance
+    """
+    return np.linalg.norm(a - b)
 
-def __top_sim_emb(emb, emb_id, embedding_matrix, first_n=15):
+def __cosine(a,b):
+    """
+    Computes the cosine similarity between a and b
+    :param a:
+    :param b:
+    :return:
+    """
+    cos_sim = dot(a, b) / (norm(a) * norm(b))
+    return cos_sim
+
+def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, first_n=15):
     """
     Compute the euclidean distance between an embedding of the triple (head, relation, or tail)
     and all the other embeddings of the same kind of objects set for wich embeddings are provided
@@ -43,18 +62,22 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, first_n=15):
     the explnation experiments does not require all the ids, but only the first (at most 15) will be used
     :return: list of ids of the top_k most similar objects to emb
     """
+    if distance_type == 'euclidian':
+        distance_function = __euclidian
+    elif distance_type == 'cosine':
+        distance_function = __cosine
     distances = {}  # dizionario {id: distanza dall'emb, id: distanza,...}
     for i in range(0, len(embedding_matrix)):
         other_rel = embedding_matrix[i]
         if i != emb_id:
-            dst = np.linalg.norm(other_rel - emb)
+            dst = distance_function(other_rel, emb)
             distances[i] = dst
     sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
     ids = list(sorted_dict.keys())
     return ids[:first_n]
 
 
-def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name):
+def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance_type):
     """
     Compute the similarity between each element in the embedding list
     :param embeddings: embeddings list in the form [[emb1], [emb2], ...]
@@ -62,7 +85,7 @@ def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name):
     """
     similarity_dictionary = {}
     for emb_id in range(0, len(embeddings)):
-        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings)
+        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type)
     dict_multiproc[proc_name] = similarity_dictionary
 
 
@@ -88,29 +111,36 @@ if __name__ == '__main__':
                         help='directory to save in the similarity data; default will be set to the same folder the data'
                              'are loaded from.',
                         default='data_dir')
+    parser.add_argument('--distance', dest='distance_type', type=str,
+                        help='choose the distance to compute between entities, possible choises: euclidian, cosine',
+                        default='euclidian')
     global args
     args = parser.parse_args()
 
     data_folder = args.data_dir
+
+    if args.distance_type != "euclidian" and args.distance_type != "cosine":
+        print(f"Distance type: {args.distance_type} is not a valid value")
+        exit()
+    print(f"Distance type: {args.distance_type}")
     save_dir = args.save_dir
     if save_dir == 'data_dir':
-        save_dir = data_folder
+        save_dir = f"{data_folder}{args.distance_type}/"
     ent, rel, inv = load_data(data_folder)
     manager1 = multiprocessing.Manager()
     return_dict = manager1.dict()
 
-
     processes_list = []
     print("Computing similarity between entities")
-    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent"))
+    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent", args.distance_type))
     processes_list.append(p1)
     p1.start()
     print("Computing similarity between relationships")
-    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel"))
+    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel", args.distance_type))
     processes_list.append(p2)
     p2.start()
     print("Computing similarity between inverse relationships")
-    p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv"))
+    p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv", args.distance_type))
     processes_list.append(p3)
     p3.start()
 
@@ -122,9 +152,9 @@ if __name__ == '__main__':
     sim_inv_rel = return_dict['inv']
 
 
-    save_data(sim_ent, save_path=f"{data_folder}/", filename="sim_entities.pkl")
-    save_data(sim_rel, save_path=f"{data_folder}/", filename="sim_rel.pkl")
-    save_data(sim_inv_rel, save_path=f"{data_folder}/", filename="sim_inv_rel.pkl")
-    print(f"All data  stored in {data_folder}")
+    save_data(sim_ent, save_path=f"{save_dir}/", filename="sim_entities.pkl")
+    save_data(sim_rel, save_path=f"{save_dir}/", filename="sim_rel.pkl")
+    save_data(sim_inv_rel, save_path=f"{save_dir}/", filename="sim_inv_rel.pkl")
+    print(f"All data  stored in {save_dir}")
 
     print()
