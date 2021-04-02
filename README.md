@@ -19,7 +19,7 @@ for **WN18**: `python3 CrossE.py --batch 2048 --data datasets/WN18/ --dim 100 --
 
 for **DBpedia15k** `python3 CrossE.py --batch 4000 --data datasets/DBpedia15k/ --dim 100 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15k/`
 
-for **DBpediaYAGO** `python3 CrossE.py --batch 2048 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15kYAGO/`
+for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15kYAGO/`
 
 
 python3 CrossE.py --batch 4000 --data datasets/FB15k-237-swapped/ --dim 100 --eval_per 20 --load_model ./save/FB15k-237-swapped/CrossE_DEFAULT_499.ckpt --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/FB15k-237-swapped/
@@ -64,10 +64,16 @@ of the original paper of CrossE. To execute the explanation process it is necess
    - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/`
    
 5. Run the explanation process
-   - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/`
+   - 2% of predictions (is default):
+      
+      - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/`
    
-   - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/`
-
+      - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/`
+   
+   - 5% of predictions
+      - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/ --predictions_perc 5`
+   
+      - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/ --predictions_perc 5`
 ## CITE
 
 If the codes help you or the paper inspire your, please cite following paper:
