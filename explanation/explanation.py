@@ -19,7 +19,25 @@ def take(n, iterable):
 
 class DataManager():
 
-    def __init__(self, pickles_path):
+    @staticmethod
+    def reduce_predictions(list_of_pred, percentage):
+        """
+        Reduce the list of arrays o predictions given in input maintaing only a specified percentage of predictions
+        :param list_of_pred: list of arrays; each element of the list correspond to the predictions obtained for the test
+        triple corresponding to the list id
+        :param percentage: percentage of predictions to maintain
+        :return: reduced data; the list is the same size because the test triples corresponding are not reduced, but the predictions
+        (so the arrays in it) are reduced
+        """
+        reduced_predictions = []
+        # riduzione
+        limit_to = len(list_of_pred[0]) * (percentage / 100)
+        limit_to = round(limit_to)  # arrotondamento
+        for p in list_of_pred:
+            reduced_predictions.append(p[:limit_to])
+        return reduced_predictions
+
+    def __init__(self, pickles_path, percentage_predictions):
         """
         Initialize the data needed for the explanation process
         :param pickles_path: (has to end with slash e.g C:/pickles/)the path of the folder containing the serialized objects in pickle format
@@ -69,10 +87,15 @@ class DataManager():
         file_path = pickles_path + file_names[4]
         with open(file_path, 'rb') as f:
             self.__test_predicted_heads = pickle.load(f)
+        #reduction of predictions
+        self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads, percentage_predictions)
 
         file_path = pickles_path + file_names[5]
         with open(file_path, 'rb') as f:
             self.__test_predicted_tails = pickle.load(f)
+        # reduction of tail predictions
+        self.__test_predicted_tails = DataManager.reduce_predictions(self.__test_predicted_tails,
+                                                                     percentage_predictions)
 
         file_path = pickles_path + file_names[6]
         with open(file_path, 'rb') as f:
@@ -582,7 +605,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
 
 
 def main():
-    dataset = DataManager(args.data_dir)
+    dataset = DataManager(args.data_dir, args.pred_perc)
     log.info('Data loaded')
     log.info("NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
     explainer = Explainer()
@@ -639,6 +662,11 @@ if __name__ == '__main__':
     parser.add_argument('--save_dir', dest='save_dir', type=str,
                         help='directory to save in the logs with the performances output and explanations',
                         default=r"expl_results/")
+
+    parser.add_argument('--predictions_perc', dest='pred_perc', type=float,
+                        help='percentage of the predictions to take into account for each test triple',
+                        default=2)
+
     global args
     args = parser.parse_args()
     log_save_dir = f"{args.save_dir}execution_logs"  # to save a subfolder with the fraction used
@@ -656,6 +684,5 @@ if __name__ == '__main__':
     log.info("PROCESSES: %d" % args.max_processes)
     log.info("SAVE DIR: %s" % args.save_dir)
     start_time = time.time()  # better for windows, more accuracy
-    # start_time = time.time()
     main()
     log.debug("--- %s seconds ---" % (time.time() - start_time))
