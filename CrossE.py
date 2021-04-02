@@ -780,10 +780,14 @@ def compute_results(model: CrossE, session: tf.Session, batch: int, test_head, t
 
     # print(f"Head predictions = {len(head_predictions)}")
     # print(f"Tail predictions = {len(tails_predictions)}")
-    with open(out_save_path_pred_head, "wb+") as f:
-        pickle.dump(head_predictions, f)
-    with open(out_save_path_pred_tails, "wb+") as f:
-        pickle.dump(tails_predictions, f)
+    try:
+        with open(out_save_path_pred_head, "wb+") as f:
+            pickle.dump(head_predictions, f)
+        with open(out_save_path_pred_tails, "wb+") as f:
+            pickle.dump(tails_predictions, f)
+        print("predictions saved")
+    except UnboundLocalError: # when the iteration is not the last to save the data
+        print("skip saving of prediction")
 
 
 
@@ -869,7 +873,7 @@ def main(args):
                 nbatches_count += 1
             log.info("raw training data initialized.")
             total_batch = nbatches_count  # batch size
-            log.debug("Stampa di conteggio ogni 100 elmenti:")
+            # log.debug("Stampa di conteggio ogni 100 elmenti:")
             while nbatches_count > 0:
                 if nbatches_count % 100 == 0:
                     log.debug(f"{nbatches_count} da processare su un batch di {total_batch}")
