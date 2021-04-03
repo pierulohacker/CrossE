@@ -634,7 +634,7 @@ def main(manager):
 
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
-    if args.pretty_print:
+    if args.pretty_print_flag:
         print("Pretty print on the log file is running...")
         pretty_print(paths_dict=paths_dictionary, data=dataset)
         print("Pretty print is over")
