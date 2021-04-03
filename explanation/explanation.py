@@ -661,7 +661,7 @@ if __name__ == '__main__':
                         default="info")
     parser.add_argument('--processes', dest='max_processes', type=int,
                         help='number of processes on which to parallelize the computation',
-                        default=10)
+                        default=2)
 
     parser.add_argument('--save_dir', dest='save_dir', type=str,
                         help='directory to save in the logs with the performances output and explanations',
