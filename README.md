@@ -67,41 +67,62 @@ of the original paper of CrossE. To execute the explanation process it is necess
       - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/`
    
    - COSINE SIMILARITY
+       
+      - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/ --distance cosine`
       
       - for **FB15k-237**: `python3 explanation/batch_similarity.py --data ./save/FB15k-237-swapped/out_data/pickle/ --distance cosine`
-        
+          
+      - for **DBpedia15k** `python3 explanation/batch_similarity.py  --data ./save/save_DBpedia15k/out_data/pickle/ --distance cosine`
+
       - for **WN18**: `python3 explanation/batch_similarity.py  --data ./save/WN18/out_data/pickle/ --distance cosine`
         
-      - for **DBpedia15k** `python3 explanation/batch_similarity.py  --data ./save/save_DBpedia15k/out_data/pickle/ --distance cosine`
       
-      - for **FB15k**: `python3 explanation/batch_similarity.py  --data ./save/save_FB15k/out_data/pickle/ --distance cosine`
+      
    
 5. Run the explanation process
-    - 2% of predictions (is default):
-        - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/2perc/`
-      
-        - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/2perc/`
    
-        - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/2perc/`
-      
-        - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/2perc/`
-   
-        - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/2perc/`
+    - EUCLIDIAN DISTANCE BASED (default):
+        - 2% of predictions (is default):
+            - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/2perc/`
+          
+            - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/2perc/`
+       
+            - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/2perc/`
+          
+            - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/2perc/`
+       
+            - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/2perc/`
+    
+        - 5% of predictions
+            - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/5perc/ --predictions_perc 5`
+          
+            - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/5perc/ --predictions_perc 5`
+       
+            - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/5perc/ --predictions_perc 5`
+          
+            - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/5perc/ --predictions_perc 5`
+       
+            - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/5perc/ --predictions_perc 5`
 
-    - 5% of predictions
-        - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/5perc/ --predictions_perc 5`
-      
-        - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/Euclidian/5perc/ --predictions_perc 5`
-   
-        - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/Euclidian/5perc/ --predictions_perc 5`
-      
-        - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/Euclidian/5perc/ --predictions_perc 5`
-   
-        - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/5perc/ --predictions_perc 5`
-
-## CITE
-
-If the codes help you or the paper inspire your, please cite following paper:
-
-Wen Zhang, Bibek Paudel, Wei Zhang, Abraham Bernstein and Huajun Chen. Interaction Embeddings for Prediction and Explanation in Knowledge Graphs. In Proceedings of the Twelfth ACM International Conference on Web Search and Data Mining (WSDM2019).
-
+    - COSINE SIMILARITY BASED
+        - 2% of predictions (is default):
+            - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/cosine/2perc/ --distance cosine `
+          
+            - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/cosine/2perc/ --distance cosine`
+       
+            - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/cosine/2perc/ --distance cosine`
+          
+            - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/cosine/2perc/ --distance cosine`
+       
+            - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/cosine/2perc/ --distance cosine`
+    
+        - 5% of predictions
+            - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/cosine/5perc/ --predictions_perc 5 --distance cosine`
+          
+            - for **FB15k-237**: `python3 explanation/explanation.py --data ./save/FB15k-237-swapped/out_data/pickle/ --save_dir explanation/results/FB15k-237-swapped/cosine/5perc/ --predictions_perc 5 --distance cosine`
+       
+            - for **DBpedia15k** `python3 explanation/explanation.py --data ./save/save_DBpedia15k/out_data/pickle/ --save_dir explanation/results/save_DBpedia15k/cosine/5perc/ --predictions_perc 5 --distance cosine`
+          
+            - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/cosine/5perc/ --predictions_perc 5 --distance cosine`
+       
+            - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/cosine/5perc/ --predictions_perc 5 --distance cosine`
