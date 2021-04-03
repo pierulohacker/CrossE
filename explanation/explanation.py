@@ -10,7 +10,7 @@ from itertools import islice
 from threading import Thread, RLock
 
 
-# TOdo: predisporre la similarità tra embeddings come un task in batch per velocizzare il processo
+
 
 def take(n, iterable):
     "Return first n items of the iterable as a list"
@@ -605,12 +605,12 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     return_dict[num_tripla] = paths_for_pred
 
 
-def main():
+def main(manager):
     dataset = DataManager(args.data_dir, args.pred_perc)
     log.info('Data loaded')
     log.info("NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
     explainer = Explainer()
-    manager = multiprocessing.Manager()
+    #manager = multiprocessing.Manager()
     paths_dictionary = manager.dict()
     jobs = []
     # {num_tripla: {num_predizione: {paths} } }
@@ -697,6 +697,8 @@ if __name__ == '__main__':
     log.info("SAVE DIR: %s" % args.save_dir)
     log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
     log.info("DISTANCE TYPE: %s" % args.distance_type)
+    global manager # dovrebbe aiutare con la interruzione prematura dei processi
+    manager = multiprocessing.Manager() # manager for the shared dict in multiprocessing
     start_time = time.time()  # better for windows, more accuracy
-    main()
+    main(manager)
     log.debug("--- %s seconds ---" % (time.time() - start_time))
