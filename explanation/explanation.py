@@ -69,7 +69,7 @@ class DataManager():
                       "test_predicted_tails.pkl", "test_tr_h.pkl", "test_triples.pkl", "train_hr_t.pkl",
                       "train_tr_h.pkl", "sim_entities.pkl", "sim_rel.pkl", "sim_inv_rel.pkl"]
 
-        file_path = pickles_path + file_names[0]
+        """file_path = pickles_path + file_names[0]
         with open(file_path, 'rb') as f:
             self.__entity_emb = pickle.load(f)
         file_path = pickles_path + file_names[1]
@@ -78,7 +78,7 @@ class DataManager():
 
         file_path = pickles_path + file_names[2]
         with open(file_path, 'rb') as f:
-            self.__rel_emb = pickle.load(f)
+            self.__rel_emb = pickle.load(f)"""
 
         file_path = pickles_path + file_names[3]
         with open(file_path, 'rb') as f:
@@ -126,7 +126,7 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__inv_rel_id_sim = pickle.load(f)
 
-    @property
+    """@property
     def entity_emb(self):
         return self.__entity_emb
 
@@ -136,7 +136,7 @@ class DataManager():
 
     @property
     def rel_emb(self):
-        return self.__rel_emb
+        return self.__rel_emb"""
 
     @property
     def test_hr_t(self):
@@ -581,10 +581,10 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     test_tail_id = tripla_test[1]
     rel_id = tripla_test[2]
     # embeddings of the test triple
-    head_emb = data.entity_emb[test_head_id]
+    """head_emb = data.entity_emb[test_head_id]
     tail_emb = data.entity_emb[test_tail_id]
     rel_emb = data.rel_emb[rel_id]
-    inv_rel_emb = data.inv_rel[rel_id]
+    inv_rel_emb = data.inv_rel[rel_id]"""
     ## TAIL PREDICTION EXPLANATION
     tail_predictions = data.test_predicted_tails[num_tripla]
     # similarità con il rel_emb della tripla
