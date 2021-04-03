@@ -631,12 +631,15 @@ def main():
     if jobs:  # se ce ne sono ancora da concludere
         for proc in jobs:
             proc.join()
-    """print("Completata la generazione delle spiegazioni.\nSerializzazione in corso...")
-    with open("explanations.pkl", "wb") as f:
-        pickle.dump(paths_dictionary, f)"""
+
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
-    pretty_print(paths_dict=paths_dictionary, data=dataset)
+    if args.pretty_print:
+        print("Pretty print on the log file is running...")
+        pretty_print(paths_dict=paths_dictionary, data=dataset)
+        print("Pretty print is over")
+
+    log.info("Computing the performances evaluation")
     recall, avg_sup_type = evaluation(paths_dictionary)
     log.info(f"Recall: {recall}")
     log.info(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
@@ -671,6 +674,10 @@ if __name__ == '__main__':
     parser.add_argument('--distance', dest='distance_type', type=str,
                         help='choose the pre-computed distance/similarity to involve: euclidian, cosine',
                         default='euclidian')
+
+    parser.add_argument('--pretty_print', dest='pretty_print_flag', type=bool,
+                        help='if true, enable the pretty print of the explanations on the log file (requires much time',
+                        default=False)
 
     global args
     args = parser.parse_args()
