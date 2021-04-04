@@ -81,7 +81,7 @@ of the original paper of CrossE. To execute the explanation process it is necess
    
 5. Run the explanation process
    
-    - EUCLIDIAN DISTANCE BASED (default):
+    - **EUCLIDIAN DISTANCE BASED** (default):
         - 2% of predictions (is default):
             - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/Euclidian/2perc/`
           
@@ -104,7 +104,7 @@ of the original paper of CrossE. To execute the explanation process it is necess
        
             - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/Euclidian/5perc/ --predictions_perc 5`
 
-    - COSINE SIMILARITY BASED
+    - **COSINE SIMILARITY BASED**
         - 2% of predictions (is default):
             - for **FB15k**: `python3 explanation/explanation.py --data ./save/save_FB15k/out_data/pickle/ --save_dir explanation/results/save_FB15k/cosine/2perc/ --distance cosine `
           

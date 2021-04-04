@@ -639,7 +639,6 @@ def main(manager):
         pretty_print(paths_dict=paths_dictionary, data=dataset)
         print("Pretty print is over")
 
-    log.info("Computing the performances evaluation")
     recall, avg_sup_type = evaluation(paths_dictionary)
     log.info(f"Recall: {recall}")
     log.info(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")

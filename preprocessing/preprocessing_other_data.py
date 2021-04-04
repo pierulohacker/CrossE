@@ -4,7 +4,7 @@ This script is designed to process the datasets proposed here --> https://github
 import argparse
 
 import pandas as pd
-from varname import nameof
+
 
 def id_to_verbose(dataset: pd.DataFrame, mapping_ent: pd.DataFrame, mapping_rel: pd.DataFrame):
     """
