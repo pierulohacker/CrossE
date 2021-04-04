@@ -68,8 +68,8 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, first_n=15):
         distance_function = __cosine
     distances = {}  # dizionario {id: distanza dall'emb, id: distanza,...}
     for i in range(0, len(embedding_matrix)):
-        other_rel = embedding_matrix[i]
         if i != emb_id:
+            other_rel = embedding_matrix[i]
             dst = distance_function(other_rel, emb)
             distances[i] = dst
     sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}
