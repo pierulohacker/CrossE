@@ -201,7 +201,7 @@ if __name__ == '__main__':
     p2.start()
     if args.distance_type != 'semantic':
         print("Computing similarity between inverse relationships")
-        p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv", args.distance_type))
+        p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv", args.distance_type, 'rel'))
         processes_list.append(p3)
         p3.start()
 
