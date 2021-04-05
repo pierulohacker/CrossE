@@ -116,7 +116,7 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, first_
 
 
     sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])} # ascending
-    if distance_function == 'cosine':
+    if distance_type == 'cosine' or  distance_type == 'semantic':
         sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1] , reverse=True)}  # ascending
     ids = list(sorted_dict.keys())
     return ids[:first_n]
