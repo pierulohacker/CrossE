@@ -212,18 +212,20 @@ if __name__ == '__main__':
         print(f"Distance type: {args.distance_type} is not a valid value")
         exit()
 
-    save_dir = args.save_dir
-    if save_dir == 'data_dir':
-        save_dir = f"{data_folder}{args.distance_type}/"
     # più comodo per specificare gli args
     if args.semantic_dir != None:
         args.distance_type = 'semantic'
+    save_dir = args.save_dir
+    if save_dir == 'data_dir':
+        save_dir = f"{data_folder}{args.distance_type}/"
+
 
     if args.distance_type == 'semantic' and args.semantic_dir is None:
         print("You had to provide a folder (--semantic_data) in which there are three files: entity2class_dict.pkl, "
               "rs_domain2id_dict.pkl, rs_range2id_dict.pkl. \nEXIT")
         exit()
     print(f"Distance type: {args.distance_type}")
+    print(f"Save folder: {save_dir}")
     ent, rel, inv, classes, domains, ranges = load_data(data_folder) # classe, domains, ranges will be None if not semantic mode
     semantic_data.entity2class_dict = classes
 
@@ -252,7 +254,7 @@ if __name__ == '__main__':
     sim_rel = return_dict['rel']
     if args.distance_type != 'semantic':
         sim_inv_rel = return_dict['inv']
-
+    print("Data computed, start saving...")
     save_data(sim_ent, save_path=f"{save_dir}/", filename="sim_entities.pkl")
     save_data(sim_rel, save_path=f"{save_dir}/", filename="sim_rel.pkl")
     if args.distance_type != 'semantic':
