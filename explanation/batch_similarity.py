@@ -10,6 +10,14 @@ import numpy as np
 from numpy import dot
 from numpy.linalg import norm
 
+class semantic_data:
+    """
+    Static objects class to host semantic data
+    """
+    entity2class_dict = {}
+    rs_domain2id_dict = {}
+    rs_range2id_dict = {}
+
 
 def load_data(pickle_folder: str):
     """
@@ -51,17 +59,17 @@ def load_data(pickle_folder: str):
     return entity_emb, rel_emb, inv_rel_emb, entity2class_dict, rs_domain2id_dict, rs_range2id_dict
 
 
-def __euclidean(a, b, id_a=None, id_b=None, obj_type=None):
+def __euclidean(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains=None, ranges=None):
     """
-    Computes euclidian distance between two lists
+    Computes euclidian distance between two lists; the other paramas are not used, is only useful to simplify the code for semantic evaluations
     :return: distance
     """
     return np.linalg.norm(a - b)
 
 
-def __cosine(a, b, id_a=None, id_b=None, obj_type=None):
+def __cosine(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains=None, ranges=None):
     """
-    Computes the cosine similarity between a and b
+    Computes the cosine similarity between a and b; the other paramas are not used, is only useful to simplify the code for semantic evaluations
     :param a: embedding a
     :param b: embedding b
     :return: cosine similarity between two embeddings a and b
@@ -69,8 +77,23 @@ def __cosine(a, b, id_a=None, id_b=None, obj_type=None):
     cos_sim = dot(a, b) / (norm(a) * norm(b))
     return cos_sim
 
+def __jaccard(set1, set2):
+    """
+    Computes jaccard index, given two sets
+    :param set1:
+    :param set2:
+    :return: similarity between the two sets in terms of jaccard index
+    """
+    numeratore = len(set1.intersection(set2))
+    denominatore = len(set1.union(set2))  # se è pari a 0 significa che nessuno dei due ha nulla
+    if denominatore == 0:
+        #todo: eventualmente restituiremo -1 o altro per denotare che bisogna intervenire con un'altra misura di similarità
+        return 0  # arbitrariamente per denotare che entrambi sono privi di qualsiasi info
+    else:
+        return numeratore / denominatore
 
-def __semantic(emb_a, emb_b, id, other_id, obj_type):
+
+def __semantic(emb_a, emb_b, id, other_id, obj_type, classes, domains, ranges):
     """
     Compute a semantic distance based on jaccard index for entities, based on the classes,
      and an abstraction of jaccard index for relationships, based on domain and range; if these semantic informations are
@@ -82,11 +105,22 @@ def __semantic(emb_a, emb_b, id, other_id, obj_type):
     :return: similarity value
     """
     # if the object type is 'ent' we have to compute a simple jaccard index and euclidian distance if there is no domains
+    if obj_type == 'ent':
+        # prendiamo i dati delle entità riguardanti le classi
+        return __jaccard(classes[id], classes[other_id])
+
+
+    elif obj_type == 'rel':
+        dom_jaccard = __jaccard(domains[id], domains[other_id])
+        range_jaccard = __jaccard(ranges[id], ranges[other_id])
+        #todo: eventualmente qui andremo a mediare dividendo per 2, altrimenti al momento abbiamo [0;2]
+        return dom_jaccard + range_jaccard
+    else:
+        raise ValueError(f"obj_type can be either 'ent' or 'rel', not '{obj_type}'")
 
 
 
-
-def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, first_n=15):
+def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classes=None, domains=None, ranges=None, first_n=15):
     """
     Compute the distance/similarity between an embedding of the triple (head, relation, or tail)
     and all the other embeddings of the same kind of objects set for wich embeddings are provided; if the mode is semantic,
@@ -111,7 +145,7 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, first_
     for i in range(0, len(embedding_matrix)):
         if i != emb_id:
             other_rel = embedding_matrix[i]
-            dst = distance_function(other_rel, emb, emb_id, i, obj_type)
+            dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
             distances[i] = dst
 
 
@@ -123,7 +157,7 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, first_
     return ids[:first_n]
 
 
-def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type):
+def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type, classes=None, domains=None, ranges=None):
     """
     Compute the similarity between each element in the embedding list
     :param obj_type: either 'rel' or 'ent', useful only for the semantic distance
@@ -132,7 +166,7 @@ def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance
     """
     similarity_dictionary = {}
     for emb_id in range(0, len(embeddings)):
-        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type, obj_type)
+        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type, obj_type, classes, domains, ranges)
     dict_multiproc[proc_name] = similarity_dictionary
 
 
@@ -177,27 +211,32 @@ if __name__ == '__main__':
     if args.distance_type != "euclidian" and args.distance_type != "cosine" and args.distance_type != "semantic":
         print(f"Distance type: {args.distance_type} is not a valid value")
         exit()
-    print(f"Distance type: {args.distance_type}")
+
     save_dir = args.save_dir
     if save_dir == 'data_dir':
         save_dir = f"{data_folder}{args.distance_type}/"
+    # più comodo per specificare gli args
+    if args.semantic_dir != None:
+        args.distance_type = 'semantic'
 
     if args.distance_type == 'semantic' and args.semantic_dir is None:
         print("You had to provide a folder (--semantic_data) in which there are three files: entity2class_dict.pkl, "
               "rs_domain2id_dict.pkl, rs_range2id_dict.pkl. \nEXIT")
         exit()
-
+    print(f"Distance type: {args.distance_type}")
     ent, rel, inv, classes, domains, ranges = load_data(data_folder) # classe, domains, ranges will be None if not semantic mode
+    semantic_data.entity2class_dict = classes
+
     manager1 = multiprocessing.Manager()
     return_dict = manager1.dict()
 
     processes_list = []
     print("Computing similarity between entities")
-    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent", args.distance_type, 'ent'))
+    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
     processes_list.append(p1)
     p1.start()
     print("Computing similarity between relationships")
-    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel", args.distance_type, 'rel'))
+    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges))
     processes_list.append(p2)
     p2.start()
     if args.distance_type != 'semantic':
