@@ -619,6 +619,7 @@ def main(manager):
         p = multiprocessing.Process(target=main_process, args=(dataset, num_tripla, explainer, paths_dictionary, args))
         jobs.append(p)
         p.start()
+        multiprocessing.Process # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
         actual_processes += 1
         # paths_dictionary[num_tripla] = paths_for_pred
         if actual_processes == max_processes:
