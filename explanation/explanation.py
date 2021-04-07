@@ -315,7 +315,6 @@ class Explainer:
         # key = path type; value = occurrences of that type
         paths_expl = {1: [], 2: [], 3: [], 4: [], 5: [], 6: []}
         # looking for the similar entities to the head and to the tail
-        top_k = 10  # top similar entities to retrieve
         """
         paths_expl conterrà le spiegazioni di 6 tipologie diverse per ogni predizione della tripla passata in input;
         per il tipo 1 conterrà una lista di triple 1:[[h,rs,t]] e analogamente anche il tipo 2
@@ -597,7 +596,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
         predicted_tail_id = tail_predictions[num_pred]
         # le code simili servono per la ricerca di spiegazioni a supporto
         sim_tails = explainer.top_sim_emb(predicted_tail_id, data.entities_similarities_dict,
-                                          top_k=10)
+                                          top_k=args.top_ent)
         # dunque cercare spiegazione per (head_id, pred_tail, rel_id)
         paths_for_pred[num_pred] = explainer.paths(test_head_id, rel_id, sim_rels, predicted_tail_id,
                                                    [data.train_hr_t, data.train_tr_h], sim_heads, sim_tails)
