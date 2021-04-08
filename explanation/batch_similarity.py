@@ -244,8 +244,7 @@ if __name__ == '__main__':
         print("You had to provide a folder (--semantic_data) in which there are three files: entity2class_dict.pkl, "
               "rs_domain2id_dict.pkl, rs_range2id_dict.pkl. \nEXIT")
         exit()
-    log = Log.get_logger(logs_dir=save_dir,
-                         level=Log.Levels.DEBUG, name="general")  # logger for general communications
+    log = Log.get_logger(logs_dir=save_dir, name="general")  # logger for general communications
     log.info(f"Distance type: {args.distance_type}")
     log.info(f"Save folder: {save_dir}")
     # logger for semantic experiments
