@@ -35,7 +35,7 @@ for **WN18**: `python3 CrossE.py --batch 2048 --data datasets/WN18/ --dim 100 --
 
 for **DBpedia15k** `python3 CrossE.py --batch 4000 --data datasets/DBpedia15k/ --dim 100 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpedia15k/ --load_model ./save/save_DBpedia15k/CrossE_DEFAULT_160.ckpt`
 
-for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpediaYAGO/ --load_model ./save/save_DBpediaYAGO/CrossE_DEFAULT_140.ckpt`
+for **DBpediaYAGO** `python3 CrossE.py --batch 1000 --data datasets/DBpediaYAGO/ --dim 300 --eval_per 20 --loss_weight 1e-5 --lr 0.01 --max_iter 500 --save_per 20 --save_dir ./save/save_DBpediaYAGO/ --load_model ./save/save_DBpediaYAGO/CrossE_DEFAULT_180.ckpt --worker 10`
 
 
 **Pay attention to the checkpoint file to specify:** in the save folder, you'll see files like these

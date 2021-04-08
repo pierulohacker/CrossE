@@ -109,14 +109,14 @@ def __semantic(emb_a, emb_b, id, other_id, obj_type, classes, domains, ranges):
     :return: similarity value
     """
     # if the object type is 'ent' we have to compute a simple jaccard index and euclidian distance if there is no domains
-    log = Log.get_logger(name="general")
+    log = Log.get_logger(name="general") # on windows it can't restore the main logger!
     if obj_type == 'ent':
         # prendiamo i dati delle entità riguardanti le classi
 
         ent_sim = __jaccard(classes[id], classes[other_id])
 
         if ent_sim > 0:  # teniamo conto di quali relazioni stanno giovando di questa misura
-            log.info(f"{id} ({classes[id]}),{other_id} ({classes[other_id]}), {ent_sim}")
+            log.debug(f"{id} ({classes[id]}),{other_id} ({classes[other_id]}), {ent_sim}")
             # print(f"{id} ({classes[id]}),{other_id} ({classes[other_id]}), {ent_sim}")
 
         return (0.2 * ent_sim) + (__cosine(emb_a, emb_b) * 0.8)
@@ -127,7 +127,7 @@ def __semantic(emb_a, emb_b, id, other_id, obj_type, classes, domains, ranges):
 
         rel_sim = dom_jaccard + range_jaccard
         if rel_sim > 0:
-            log.info(
+            log.debug(
                 f"{id} (domain: {domains[id]}) (range: {ranges[id]}),{other_id} (domain: {domains[other_id]}) (range: {ranges[other_id]}), {rel_sim}")
             # print(f"{id} (domain: {domains[id]}) (range: {ranges[id]}),{other_id} (domain: {domains[other_id]}) (range: {ranges[other_id]}), {rel_sim}")
 
