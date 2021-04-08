@@ -7,8 +7,11 @@ import multiprocessing
 from pathlib import Path
 import pickle
 import numpy as np
+from global_logger import Log
 from numpy import dot
 from numpy.linalg import norm
+
+
 
 class semantic_data:
     """
@@ -25,7 +28,8 @@ def load_data(pickle_folder: str):
     :param pickle_folder: folder containing the embeddings
     :return: data loaded in the form of list of lists; E.g ent_emb = [[emb1 numbs], [emb2 numbs], ...]
     """
-    file_names = ["ent_emb.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl", "rs_range2id_dict.pkl"]
+    file_names = ["ent_emb.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl",
+                  "rs_range2id_dict.pkl"]
     file_path = f"{pickle_folder}{file_names[0]}"
     with open(file_path, 'rb') as f:
         entity_emb = pickle.load(f)
@@ -55,7 +59,6 @@ def load_data(pickle_folder: str):
         with open(file_path, 'rb') as f:
             rs_range2id_dict = pickle.load(f)
 
-
     return entity_emb, rel_emb, inv_rel_emb, entity2class_dict, rs_domain2id_dict, rs_range2id_dict
 
 
@@ -77,6 +80,7 @@ def __cosine(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains=No
     cos_sim = dot(a, b) / (norm(a) * norm(b))
     return cos_sim
 
+
 def __jaccard(set1, set2):
     """
     Computes jaccard index, given two sets
@@ -84,12 +88,12 @@ def __jaccard(set1, set2):
     :param set2:
     :return: similarity between the two sets in terms of jaccard index
     """
-    numeratore = len(set1.intersection(set2))
-    denominatore = len(set1.union(set2))  # se è pari a 0 significa che nessuno dei due ha nulla
-    if denominatore == 0:
-        #todo: eventualmente restituiremo -1 o altro per denotare che bisogna intervenire con un'altra misura di similarità
-        return 0  # arbitrariamente per denotare che entrambi sono privi di qualsiasi info
+
+    if len(set1) == 0 or len(set2) == 0:  # uno dei due ha owl:thing
+        return 0
     else:
+        numeratore = len(set1.intersection(set2))
+        denominatore = len(set1.union(set2))  # se è pari a 0 significa che nessuno dei due ha nulla
         return numeratore / denominatore
 
 
@@ -105,22 +109,35 @@ def __semantic(emb_a, emb_b, id, other_id, obj_type, classes, domains, ranges):
     :return: similarity value
     """
     # if the object type is 'ent' we have to compute a simple jaccard index and euclidian distance if there is no domains
+    log = Log.get_logger(name="general")
     if obj_type == 'ent':
         # prendiamo i dati delle entità riguardanti le classi
-        return __jaccard(classes[id], classes[other_id])
 
+        ent_sim = __jaccard(classes[id], classes[other_id])
+
+        if ent_sim > 0:  # teniamo conto di quali relazioni stanno giovando di questa misura
+            log.info(f"{id} ({classes[id]}),{other_id} ({classes[other_id]}), {ent_sim}")
+            # print(f"{id} ({classes[id]}),{other_id} ({classes[other_id]}), {ent_sim}")
+
+        return (0.2 * ent_sim) + (__cosine(emb_a, emb_b) * 0.8)
 
     elif obj_type == 'rel':
         dom_jaccard = __jaccard(domains[id], domains[other_id])
         range_jaccard = __jaccard(ranges[id], ranges[other_id])
-        #todo: eventualmente qui andremo a mediare dividendo per 2, altrimenti al momento abbiamo [0;2]
-        return dom_jaccard + range_jaccard
+
+        rel_sim = dom_jaccard + range_jaccard
+        if rel_sim > 0:
+            log.info(
+                f"{id} (domain: {domains[id]}) (range: {ranges[id]}),{other_id} (domain: {domains[other_id]}) (range: {ranges[other_id]}), {rel_sim}")
+            # print(f"{id} (domain: {domains[id]}) (range: {ranges[id]}),{other_id} (domain: {domains[other_id]}) (range: {ranges[other_id]}), {rel_sim}")
+
+        return (0.2 * rel_sim) + (__cosine(emb_a, emb_b) * 0.8)
     else:
         raise ValueError(f"obj_type can be either 'ent' or 'rel', not '{obj_type}'")
 
 
-
-def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classes=None, domains=None, ranges=None, first_n=15):
+def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classes=None, domains=None, ranges=None,
+                  first_n=15):
     """
     Compute the distance/similarity between an embedding of the triple (head, relation, or tail)
     and all the other embeddings of the same kind of objects set for wich embeddings are provided; if the mode is semantic,
@@ -146,18 +163,19 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
         if i != emb_id:
             other_rel = embedding_matrix[i]
             dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
+
             distances[i] = dst
 
-
     if distance_type == 'cosine' or distance_type == 'semantic':
-        sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1] , reverse=True)}  # descending
-    else: #euclidean
+        sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1], reverse=True)}  # descending
+    else:  # euclidean
         sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}  # ascending
     ids = list(sorted_dict.keys())
     return ids[:first_n]
 
 
-def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type, classes=None, domains=None, ranges=None):
+def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type, classes=None,
+                           domains=None, ranges=None):
     """
     Compute the similarity between each element in the embedding list
     :param obj_type: either 'rel' or 'ent', useful only for the semantic distance
@@ -166,7 +184,8 @@ def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance
     """
     similarity_dictionary = {}
     for emb_id in range(0, len(embeddings)):
-        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type, obj_type, classes, domains, ranges)
+        similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type, obj_type,
+                                                      classes, domains, ranges)
     dict_multiproc[proc_name] = similarity_dictionary
 
 
@@ -184,10 +203,10 @@ def save_data(sim_dict, save_path, filename):
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description='Batch similarity.')
     parser.add_argument('--data', dest='data_dir', type=str,
                         help="Data folder containing the output of the training phase (pickle_files")
-
 
     parser.add_argument('--save_dir', dest='save_dir', type=str,
                         help='directory to save in the similarity data; default will be set to the same folder the data'
@@ -202,7 +221,6 @@ if __name__ == '__main__':
                              "By default it is None, because by default the similarity function is the euclidean distance.",
                         default=None)
 
-
     global args
     args = parser.parse_args()
 
@@ -215,35 +233,52 @@ if __name__ == '__main__':
     # più comodo per specificare gli args
     if args.semantic_dir != None:
         args.distance_type = 'semantic'
+
     save_dir = args.save_dir
     if save_dir == 'data_dir':
         save_dir = f"{data_folder}{args.distance_type}/"
 
+    args.save_dir = save_dir
 
     if args.distance_type == 'semantic' and args.semantic_dir is None:
         print("You had to provide a folder (--semantic_data) in which there are three files: entity2class_dict.pkl, "
               "rs_domain2id_dict.pkl, rs_range2id_dict.pkl. \nEXIT")
         exit()
-    print(f"Distance type: {args.distance_type}")
-    print(f"Save folder: {save_dir}")
-    ent, rel, inv, classes, domains, ranges = load_data(data_folder) # classe, domains, ranges will be None if not semantic mode
+    log = Log.get_logger(logs_dir=save_dir,
+                         level=Log.Levels.DEBUG, name="general")  # logger for general communications
+    log.info(f"Distance type: {args.distance_type}")
+    log.info(f"Save folder: {save_dir}")
+    # logger for semantic experiments
+    """if args.distance_type == 'semantic':
+        # Path(save_dir).mkdir(parents=True, exist_ok=True)
+        ent_log = Log.get_logger(logs_dir=save_dir, name="ent",
+                                 level=Log.Levels.DEBUG)  # to store semantic similarities
+        rel_log = Log.get_logger(logs_dir=save_dir, name="rel", level=Log.Levels.DEBUG)
+        ent_log.debug("ENTITIES WITH SEMANTIC SIMILARITY")
+        rel_log.debug("RELATIONSHIPS WITH SEMANTIC SIMILARITY")"""
+
+    ent, rel, inv, classes, domains, ranges = load_data(
+        data_folder)  # classe, domains, ranges will be None if not semantic mode
     semantic_data.entity2class_dict = classes
 
     manager1 = multiprocessing.Manager()
     return_dict = manager1.dict()
 
     processes_list = []
-    print("Computing similarity between entities")
-    p1 = multiprocessing.Process(target=compute_sim_dictionary, args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
+    log.info("Computing similarity between entities")
+    p1 = multiprocessing.Process(target=compute_sim_dictionary,
+                                 args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
     processes_list.append(p1)
     p1.start()
-    print("Computing similarity between relationships")
-    p2 = multiprocessing.Process(target=compute_sim_dictionary, args=(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges))
+    log.info("Computing similarity between relationships")
+    p2 = multiprocessing.Process(target=compute_sim_dictionary,
+                                 args=(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges))
     processes_list.append(p2)
     p2.start()
     if args.distance_type != 'semantic':
-        print("Computing similarity between inverse relationships")
-        p3 = multiprocessing.Process(target=compute_sim_dictionary, args=(inv, return_dict, "inv", args.distance_type, 'rel'))
+        log.info("Computing similarity between inverse relationships")
+        p3 = multiprocessing.Process(target=compute_sim_dictionary,
+                                     args=(inv, return_dict, "inv", args.distance_type, 'rel'))
         processes_list.append(p3)
         p3.start()
 
@@ -254,11 +289,11 @@ if __name__ == '__main__':
     sim_rel = return_dict['rel']
     if args.distance_type != 'semantic':
         sim_inv_rel = return_dict['inv']
-    print("Data computed, start saving...")
+    log.info("Data computed, start saving...")
     save_data(sim_ent, save_path=f"{save_dir}/", filename="sim_entities.pkl")
     save_data(sim_rel, save_path=f"{save_dir}/", filename="sim_rel.pkl")
     if args.distance_type != 'semantic':
         save_data(sim_inv_rel, save_path=f"{save_dir}/", filename="sim_inv_rel.pkl")
-    print(f"All data  stored in {save_dir}")
+    log.info(f"All data  stored in {save_dir}")
 
     print()
