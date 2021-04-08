@@ -639,14 +639,15 @@ def main(manager):
 
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
-    if args.pretty_print_flag:
-        print("Pretty print on the log file is running...")
-        pretty_print(paths_dict=paths_dictionary, data=dataset)
-        print("Pretty print is over")
+
 
     recall, avg_sup_type = evaluation(paths_dictionary)
     log.info(f"Recall: {recall}")
     log.info(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
+    if args.pretty_print_flag:
+        print("Pretty print on the log file is running...")
+        pretty_print(paths_dict=paths_dictionary, data=dataset)
+        print("Pretty print is over")
     print()
 
 
