@@ -334,6 +334,7 @@ class Explainer:
         for t in thread_list:
             t.join()
 
+
         none_counter = 0  # useful to assign None to paths_expl when there is not any explaination
         for expl_type_paths in paths_expl.values():
             if not expl_type_paths:  # se è vuota
@@ -496,10 +497,10 @@ def pretty_print(paths_dict, data: DataManager):
         head = test_triple[0]
         rel = test_triple[2]
         for pred_index in paths_dict[triple_test_index].keys():
-            log.debug(
-                f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
+            # log.debug(f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
             explanations = paths_dict[triple_test_index][pred_index]
             if explanations != {None}:
+                log.debug(f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
                 # siamo nel dizionario che contiene le diverse tipologie di path
                 log.debug(explanations)
                 for k in explanations.keys():
@@ -577,7 +578,6 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     log.info(f"Processing predictions for test triple: {tripla_test}")
     # ids
     test_head_id = tripla_test[0]
-    test_tail_id = tripla_test[1]
     rel_id = tripla_test[2]
     # embeddings of the test triple
     """head_emb = data.entity_emb[test_head_id]
@@ -609,28 +609,33 @@ def main(manager):
     log.info('Data loaded')
     log.info("NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
     explainer = Explainer()
-    #manager = multiprocessing.Manager()
-    paths_dictionary = manager.dict()
-    jobs = []
-    # {num_tripla: {num_predizione: {paths} } }
-    max_processes = args.max_processes
-    actual_processes = 0
-    for num_tripla in range(0, len(dataset.test_triples)):
-        p = multiprocessing.Process(target=main_process, args=(dataset, num_tripla, explainer, paths_dictionary, args))
-        jobs.append(p)
-        p.start()
-        multiprocessing.Process # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
-        actual_processes += 1
-        # paths_dictionary[num_tripla] = paths_for_pred
-        if actual_processes == max_processes:
+    if args.multiproc_flag: # se è abilitato il multiprocessing
+        paths_dictionary = manager.dict()
+        jobs = []
+        # {num_tripla: {num_predizione: {paths} } }
+        max_processes = args.max_processes
+        actual_processes = 0
+        for num_tripla in range(0, len(dataset.test_triples)):
+            p = multiprocessing.Process(target=main_process, args=(dataset, num_tripla, explainer, paths_dictionary, args))
+            jobs.append(p)
+            p.start()
+            multiprocessing.Process # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
+            actual_processes += 1
+            # paths_dictionary[num_tripla] = paths_for_pred
+            if actual_processes == max_processes:
+                for proc in jobs:
+                    proc.join()
+                actual_processes = 0
+                jobs = []
+
+        if jobs:  # se ce ne sono ancora da concludere
             for proc in jobs:
                 proc.join()
-            actual_processes = 0
-            jobs = []
 
-    if jobs:  # se ce ne sono ancora da concludere
-        for proc in jobs:
-            proc.join()
+    else: # senza multiprocessing
+        paths_dictionary = dict()
+        for num_tripla in range(0, len(dataset.test_triples)):
+            main_process(dataset, num_tripla, explainer, paths_dictionary, args)
 
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
@@ -658,6 +663,9 @@ if __name__ == '__main__':
     parser.add_argument('--log_level', dest='log_level', type=str,
                         help='set the logging level, choose between info or debug',
                         default="info")
+    parser.add_argument('--multiprocessing', dest='multiproc_flag', type=bool,
+                        help='enables multiprocessing, by default is not enabled',
+                        default=False)
     parser.add_argument('--processes', dest='max_processes', type=int,
                         help='number of processes on which to parallelize the computation',
                         default=2)
@@ -692,7 +700,9 @@ if __name__ == '__main__':
     log.info("TOP_ENT: %d" % args.top_ent)
     log.info("TOP_REL: %d" % args.top_rel)
     log.info("LOG LEVEL: %s" % args.log_level)
-    log.info("PROCESSES: %d" % args.max_processes)
+    log.info("MULTIPROCESSING: %s" % args.multiproc_flag)
+    if args.multiproc_flag is True:
+        log.info("PROCESSES: %d" % args.max_processes)
     log.info("SAVE DIR: %s" % args.save_dir)
     log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
     log.info("DISTANCE TYPE: %s" % args.distance_type)
