@@ -292,7 +292,7 @@ class Explainer:
             found = False
         return found
 
-    def paths(self, head, relationship, sim_relationships, tail, train_dicts: list, similar_heads, similar_tails):
+    def paths(self, head, relationship, sim_relationships, tail, train_dicts: list, similar_heads, similar_tails, args):
         """
         Looks for paths between head and tail via relationships provided in input; there are 6 paths that can be detected
         :param return_dict: dictionary to store data using multiprocessing
@@ -322,20 +322,21 @@ class Explainer:
         Sarà il modo in cui andremo a leggere i dati a cambiare per ogni tipologia
         """
         lock = RLock()  # to manage resources in the multithread path finder
-        """thread_list = []
-        for sim_rel in sim_relationships:
-            t = Thread(target=self.__multithread_path_finder,
-                       args=(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
-                             paths_expl, lock, tr_h))
-            t.start()
-            thread_list.append(t)
-            # multithread_path_find
-        for t in thread_list:
-            t.join()"""
-
-        for sim_rel in sim_relationships:
-            self.__multithread_path_finder(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
-                                           paths_expl, lock, tr_h)
+        if args.multithreading is True:
+            thread_list = []
+            for sim_rel in sim_relationships:
+                t = Thread(target=self.__multithread_path_finder,
+                           args=(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
+                                 paths_expl, lock, tr_h))
+                t.start()
+                thread_list.append(t)
+                # multithread_path_find
+            for t in thread_list:
+                t.join()
+        else:
+            for sim_rel in sim_relationships:
+                self.__multithread_path_finder(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
+                                               paths_expl, lock, tr_h)
 
         none_counter = 0  # useful to assign None to paths_expl when there is not any explaination
         for expl_type_paths in paths_expl.values():
@@ -602,7 +603,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
                                           top_k=args.top_ent)
         # dunque cercare spiegazione per (head_id, pred_tail, rel_id)
         paths_for_pred[num_pred] = explainer.paths(test_head_id, rel_id, sim_rels, predicted_tail_id,
-                                                   [data.train_hr_t, data.train_tr_h], sim_heads, sim_tails)
+                                                   [data.train_hr_t, data.train_tr_h], sim_heads, sim_tails, args)
 
     return_dict[num_tripla] = paths_for_pred
 
@@ -672,6 +673,9 @@ if __name__ == '__main__':
                         default="info")
     parser.add_argument('--multiprocessing', dest='multiproc_flag', type=bool,
                         help='enables multiprocessing, by default is not enabled',
+                        default=False)
+    parser.add_argument('--multithreading', dest='multithreading', type=bool,
+                        help='enables multithreading to compute paths for explanation, by default is not enabled',
                         default=False)
     parser.add_argument('--processes', dest='max_processes', type=int,
                         help='number of processes on which to parallelize the computation',
