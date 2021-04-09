@@ -121,9 +121,10 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__relation_id_sim = pickle.load(f)
 
-        file_path = similarity_data_path + file_names[12]
-        with open(file_path, 'rb') as f:
-            self.__inv_rel_id_sim = pickle.load(f)
+        if args.distance_type != "semantic":
+            file_path = similarity_data_path + file_names[12]
+            with open(file_path, 'rb') as f:
+                self.__inv_rel_id_sim = pickle.load(f)
 
     """@property
     def entity_emb(self):
