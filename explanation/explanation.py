@@ -10,8 +10,6 @@ from itertools import islice
 from threading import Thread, RLock
 
 
-
-
 def take(n, iterable):
     "Return first n items of the iterable as a list"
     return dict(islice(iterable, n))
@@ -87,8 +85,9 @@ class DataManager():
         file_path = pickles_path + file_names[4]
         with open(file_path, 'rb') as f:
             self.__test_predicted_heads = pickle.load(f)
-        #reduction of predictions
-        self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads, percentage_predictions)
+        # reduction of predictions
+        self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads,
+                                                                     percentage_predictions)
 
         file_path = pickles_path + file_names[5]
         with open(file_path, 'rb') as f:
@@ -323,7 +322,7 @@ class Explainer:
         Sarà il modo in cui andremo a leggere i dati a cambiare per ogni tipologia
         """
         lock = RLock()  # to manage resources in the multithread path finder
-        thread_list = []
+        """thread_list = []
         for sim_rel in sim_relationships:
             t = Thread(target=self.__multithread_path_finder,
                        args=(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
@@ -332,8 +331,11 @@ class Explainer:
             thread_list.append(t)
             # multithread_path_find
         for t in thread_list:
-            t.join()
+            t.join()"""
 
+        for sim_rel in sim_relationships:
+            self.__multithread_path_finder(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
+                                           paths_expl, lock, tr_h)
 
         none_counter = 0  # useful to assign None to paths_expl when there is not any explaination
         for expl_type_paths in paths_expl.values():
@@ -500,14 +502,14 @@ def pretty_print(paths_dict, data: DataManager):
             # log.debug(f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
             explanations = paths_dict[triple_test_index][pred_index]
             if explanations != {None}:
-                log.debug(f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
+                log.debug(
+                    f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
                 # siamo nel dizionario che contiene le diverse tipologie di path
                 log.debug(explanations)
                 for k in explanations.keys():
                     if explanations[k]:  # = se non è vuota la lista di quella tipologia di spiegazioni
                         log.debug(f"Type {k}:")
                         [log.debug(e) for e in explanations[k]]
-
 
 
 def evaluation(paths_dict=None):
@@ -533,33 +535,34 @@ def evaluation(paths_dict=None):
             if explanations != {None}:
                 predictions_with_expl += 1
                 # siamo nel dizionario che contiene le diverse tipologie di path
-                #print(explanations)
+                # print(explanations)
                 for type in explanations.keys():
                     if explanations[type]:  # = se non è vuota la lista di quella tipologia di spiegazioni
-                        #print(f"Type {type}:")
-                        #[print(e) for e in explanations[type]]
-                        num_expl = 0 # number of explanations of this type for the given prediction
-                        for e in explanations[type]: # per ogni spiegazione prendo il supporto ottenuto, che sarà almeno 1
-                            num_expl +=1
+                        # print(f"Type {type}:")
+                        # [print(e) for e in explanations[type]]
+                        num_expl = 0  # number of explanations of this type for the given prediction
+                        for e in explanations[
+                            type]:  # per ogni spiegazione prendo il supporto ottenuto, che sarà almeno 1
+                            num_expl += 1
                             try:
-                                supp_per_type[type] += len(e.support_paths) # qui conta quanto supporto per questo tipo per questa spiegazione, che si somma al totale supporti di questa tipologia
+                                supp_per_type[type] += len(
+                                    e.support_paths)  # qui conta quanto supporto per questo tipo per questa spiegazione, che si somma al totale supporti di questa tipologia
                             except KeyError:
                                 # dizionario alla prima iterazione
                                 supp_per_type[type] = len(e.support_paths)
                         try:
-                            expl_per_type[type] += num_expl # tutte le spiegazioni di questo tipo
+                            expl_per_type[type] += num_expl  # tutte le spiegazioni di questo tipo
                         except KeyError:
                             expl_per_type[type] = num_expl
 
-
-    recall = predictions_with_expl/predictions
-    #print(recall)
+    recall = predictions_with_expl / predictions
+    # print(recall)
 
     # avg support
     # supporto medio sulle triple per cui vi è almeno una spiegazione
     avg_supp_per_type = {}
     for type in expl_per_type.keys():
-        avg_supp_per_type[type] = supp_per_type[type]/expl_per_type[type]
+        avg_supp_per_type[type] = supp_per_type[type] / expl_per_type[type]
     return recall, avg_supp_per_type
 
 
@@ -607,19 +610,21 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
 def main(manager):
     dataset = DataManager(args.data_dir, args.pred_perc)
     log.info('Data loaded')
-    log.info("NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
+    log.info(
+        "NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
     explainer = Explainer()
-    if args.multiproc_flag: # se è abilitato il multiprocessing
+    if args.multiproc_flag:  # se è abilitato il multiprocessing
         paths_dictionary = manager.dict()
         jobs = []
         # {num_tripla: {num_predizione: {paths} } }
         max_processes = args.max_processes
         actual_processes = 0
         for num_tripla in range(0, len(dataset.test_triples)):
-            p = multiprocessing.Process(target=main_process, args=(dataset, num_tripla, explainer, paths_dictionary, args))
+            p = multiprocessing.Process(target=main_process,
+                                        args=(dataset, num_tripla, explainer, paths_dictionary, args))
             jobs.append(p)
             p.start()
-            multiprocessing.Process # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
+            multiprocessing.Process  # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
             actual_processes += 1
             # paths_dictionary[num_tripla] = paths_for_pred
             if actual_processes == max_processes:
@@ -632,7 +637,7 @@ def main(manager):
             for proc in jobs:
                 proc.join()
 
-    else: # senza multiprocessing
+    else:  # senza multiprocessing
         paths_dictionary = dict()
         for num_tripla in range(0, len(dataset.test_triples)):
             main_process(dataset, num_tripla, explainer, paths_dictionary, args)
@@ -640,10 +645,10 @@ def main(manager):
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
 
-
     recall, avg_sup_type = evaluation(paths_dictionary)
     log.info(f"Recall: {recall}")
-    log.info(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
+    log.info(
+        f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
     if args.pretty_print_flag:
         print("Pretty print on the log file is running...")
         pretty_print(paths_dict=paths_dictionary, data=dataset)
@@ -659,8 +664,9 @@ if __name__ == '__main__':
     parser.add_argument('--top_rel', dest='top_rel', type=int, help='Number of the top k similar embeddings to consider'
                                                                     'while computing the paths based on similar relationships',
                         default=5)
-    parser.add_argument('--data', dest='data_dir', type=str, help="Data folder containing the output of the training phase and"
-                                                                  "the similarities between entites and between relationships (pickle files)")
+    parser.add_argument('--data', dest='data_dir', type=str,
+                        help="Data folder containing the output of the training phase and"
+                             "the similarities between entites and between relationships (pickle files)")
     parser.add_argument('--log_level', dest='log_level', type=str,
                         help='set the logging level, choose between info or debug',
                         default="info")
@@ -707,8 +713,8 @@ if __name__ == '__main__':
     log.info("SAVE DIR: %s" % args.save_dir)
     log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
     log.info("DISTANCE TYPE: %s" % args.distance_type)
-    global manager # dovrebbe aiutare con la interruzione prematura dei processi
-    manager = multiprocessing.Manager() # manager for the shared dict in multiprocessing
+    global manager  # dovrebbe aiutare con la interruzione prematura dei processi
+    manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
     start_time = time.time()  # better for windows, more accuracy
     main(manager)
     log.debug("--- %s seconds ---" % (time.time() - start_time))
