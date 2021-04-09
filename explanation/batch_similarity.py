@@ -220,6 +220,9 @@ if __name__ == '__main__':
                              "for the entities; tipically it's the folder in which the raw dataset files are stored."
                              "By default it is None, because by default the similarity function is the euclidean distance.",
                         default=None)
+    parser.add_argument('--multiprocessing', dest='multiproc_flag', type=bool,
+                        help='enables multiprocessing, by default is not enabled',
+                        default=False)
 
     global args
     args = parser.parse_args()
@@ -259,30 +262,43 @@ if __name__ == '__main__':
     ent, rel, inv, classes, domains, ranges = load_data(
         data_folder)  # classe, domains, ranges will be None if not semantic mode
     semantic_data.entity2class_dict = classes
+    if args.multiproc_flag:
+        manager1 = multiprocessing.Manager()
+        return_dict = manager1.dict()
 
-    manager1 = multiprocessing.Manager()
-    return_dict = manager1.dict()
+        processes_list = []
+        log.info("Computing similarity between entities")
+        p1 = multiprocessing.Process(target=compute_sim_dictionary,
+                                     args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
+        processes_list.append(p1)
+        p1.start()
+        log.info("Computing similarity between relationships")
+        p2 = multiprocessing.Process(target=compute_sim_dictionary,
+                                     args=(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges))
+        processes_list.append(p2)
+        p2.start()
+        if args.distance_type != 'semantic':
+            log.info("Computing similarity between inverse relationships")
+            p3 = multiprocessing.Process(target=compute_sim_dictionary,
+                                         args=(inv, return_dict, "inv", args.distance_type, 'rel'))
+            processes_list.append(p3)
+            p3.start()
 
-    processes_list = []
-    log.info("Computing similarity between entities")
-    p1 = multiprocessing.Process(target=compute_sim_dictionary,
-                                 args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
-    processes_list.append(p1)
-    p1.start()
-    log.info("Computing similarity between relationships")
-    p2 = multiprocessing.Process(target=compute_sim_dictionary,
-                                 args=(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges))
-    processes_list.append(p2)
-    p2.start()
-    if args.distance_type != 'semantic':
-        log.info("Computing similarity between inverse relationships")
-        p3 = multiprocessing.Process(target=compute_sim_dictionary,
-                                     args=(inv, return_dict, "inv", args.distance_type, 'rel'))
-        processes_list.append(p3)
-        p3.start()
+        for proc in processes_list:
+            proc.join()
 
-    for proc in processes_list:
-        proc.join()
+    else:
+        return_dict = {}
+        log.info("Computing similarity between entities")
+        compute_sim_dictionary(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
+
+        log.info("Computing similarity between relationships")
+        compute_sim_dictionary(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges)
+
+        if args.distance_type != 'semantic':
+            log.info("Computing similarity between inverse relationships")
+            compute_sim_dictionary(inv, return_dict, "inv", args.distance_type, 'rel')
+
 
     sim_ent = return_dict['ent']
     sim_rel = return_dict['rel']
