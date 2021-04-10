@@ -78,16 +78,18 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__rel_emb = pickle.load(f)"""
 
+        """ NOT USED
         file_path = pickles_path + file_names[3]
         with open(file_path, 'rb') as f:
-            self.__test_hr_t = pickle.load(f)
+            self.__test_hr_t = pickle.load(f)"""
 
+        """ NOT USED
         file_path = pickles_path + file_names[4]
         with open(file_path, 'rb') as f:
             self.__test_predicted_heads = pickle.load(f)
         # reduction of predictions
         self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads,
-                                                                     percentage_predictions)
+                                                                     percentage_predictions)"""
 
         file_path = pickles_path + file_names[5]
         with open(file_path, 'rb') as f:
@@ -96,9 +98,10 @@ class DataManager():
         self.__test_predicted_tails = DataManager.reduce_predictions(self.__test_predicted_tails,
                                                                      percentage_predictions)
 
+        """ NOT USED
         file_path = pickles_path + file_names[6]
         with open(file_path, 'rb') as f:
-            self.__test_tr_h = pickle.load(f)
+            self.__test_tr_h = pickle.load(f)"""
 
         file_path = pickles_path + file_names[7]
         with open(file_path, 'rb') as f:
