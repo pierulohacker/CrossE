@@ -719,7 +719,7 @@ if __name__ == '__main__':
     if args.multiproc_flag is True:
         log.info("PROCESSES: %d" % args.max_processes)
     log.info("SAVE DIR: %s" % args.save_dir)
-    log.info("PERCENTAGE OF PREDICTIONS: %d" % args.pred_perc)
+    log.info("PERCENTAGE OF PREDICTIONS: %s" % args.pred_perc)
     log.info("DISTANCE TYPE: %s" % args.distance_type)
     global manager  # dovrebbe aiutare con la interruzione prematura dei processi
     manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
