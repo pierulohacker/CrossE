@@ -4,14 +4,14 @@ to speed up the explanation process
 """
 import argparse
 import multiprocessing
+from tqdm import tqdm
 from pathlib import Path
 import pickle
 import numpy as np
 from global_logger import Log
 from numpy import dot
 from numpy.linalg import norm
-
-
+import os
 
 class semantic_data:
     """
@@ -140,15 +140,14 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
                   first_n=15):
     """
     Compute the distance/similarity between an embedding of the triple (head, relation, or tail)
-    and all the other embeddings of the same kind of objects set for wich embeddings are provided; if the mode is semantic,
-    the similarity will be a mix between semantic informations and euclidian distances
-    :param top_k: entities/relationships most similar to return
-    :param emb_id: id of the object of the KG, useful to exlude it from the comparison
+    and all the other embeddings of the same kind of objects set for which embeddings are provided; if the mode is semantic,
+    the similarity will be a mix between semantic information and euclidian distances
     :param emb: relationship of the test triple to compare with the other relationships
+    :param emb_id: id of the object of the KG, useful to exclude it from the comparison
     :param embedding_matrix: embeddings of the entities/relationships in the KG
     :param obj_type: either 'rel' or 'ent', useful only for the semantic distance
     :param first_n: number of top similar embeddings ids to keep, it helps to reduce the size required to store files; also
-    the explnation experiments does not require all the ids, but only the first (at most 15) will be used
+    the explanation experiments does not require all the ids, but only the first (at most 15) will be used
     :return: list of ids of the top_k most similar objects to emb
     """
     if distance_type == 'euclidian':
@@ -168,7 +167,31 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
 
     if distance_type == 'cosine' or distance_type == 'semantic':
         sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1], reverse=True)}  # descending
-    else:  # euclidean
+    else:  # euclidian
+        sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}  # ascending
+    ids = list(sorted_dict.keys())
+    return ids[:first_n]
+
+
+def __top_sim_emb_clustering(emb, emb_id, embedding_dict, distance_type, obj_type, classes=None, domains=None, ranges=None,
+                  first_n=15):
+    if distance_type == 'euclidian':
+        distance_function = __euclidean
+    elif distance_type == 'cosine':
+        distance_function = __cosine
+    elif distance_type == 'semantic':
+        distance_function = __semantic
+
+    distances = {}  # dizionario {id: distanza dall'emb, id: distanza,...}
+    for i in embedding_dict.keys():
+        if i != emb_id:
+            other_rel = embedding_dict[i]
+            dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
+            distances[i] = dst
+
+    if distance_type == 'cosine' or distance_type == 'semantic':
+        sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1], reverse=True)}  # descending
+    else:  # euclidian
         sorted_dict = {k: v for k, v in sorted(distances.items(), key=lambda item: item[1])}  # ascending
     ids = list(sorted_dict.keys())
     return ids[:first_n]
@@ -183,9 +206,51 @@ def compute_sim_dictionary(embeddings: list, dict_multiproc, proc_name, distance
     :return: dictionary in the form {emb_id: [sim_emb_id1, sim_emb_id2]} ranked by similarity
     """
     similarity_dictionary = {}
-    for emb_id in range(0, len(embeddings)):
+    for emb_id in tqdm(range(len(embeddings))):
         similarity_dictionary[emb_id] = __top_sim_emb(embeddings[emb_id], emb_id, embeddings, distance_type, obj_type,
                                                       classes, domains, ranges)
+    dict_multiproc[proc_name] = similarity_dictionary
+
+
+def embedding_cluster(embeddings, clustering_model):
+    """
+    The clustering method computes an array containing, at each position, the ID of the cluster to which the embedding
+    in that position belongs. So the length of this list is the same as the number of embeddings. This function
+    builds a dictionary where the keys are the cluster IDs and the values are dictionaries having embedding ID as key and
+    the actual embedding as value cluster. Suppose to have 4 embeddings and 2 clusters.embedding1 and embedding2 belong
+    to cluster1, while embedding3 and embedding4 belong to cluster2. The output is
+    {
+       cluster1_id: {emb1_id: embedding1
+                     emb2_id: embedding2
+                     }
+       cluster2_id: {emb3_id: embedding3
+                     emb4_id: embedding4
+                     }
+    }
+
+    """
+    cluster_labels = clustering_model.labels_   # List of the labels of the clusters to which each embedding belongs
+    labels_set = set(cluster_labels)
+
+    clusters_dict = {}
+    for label in labels_set:
+        d = {}
+        for i in range(len(cluster_labels)):
+            if cluster_labels[i] == label:
+                d[i] = embeddings[i]
+        clusters_dict[label] = d
+    return clusters_dict
+
+
+def compute_sim_dictionary_clustering(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type,
+                                      clusters_dict, classes=None, domains=None, ranges=None):
+    similarity_dictionary = {}
+    for emb_id in tqdm(range(len(embeddings))):
+        for cluster_id in clusters_dict.keys():
+            if emb_id in clusters_dict[cluster_id].keys():  # Retrieve the cluster to which the embedding belongs
+                similarity_dictionary[emb_id] = __top_sim_emb_clustering(embeddings[emb_id], emb_id,
+                                                                         clusters_dict[cluster_id],
+                                                                         distance_type, obj_type, classes, domains, ranges)
     dict_multiproc[proc_name] = similarity_dictionary
 
 
@@ -203,7 +268,6 @@ def save_data(sim_dict, save_path, filename):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description='Batch similarity.')
     parser.add_argument('--data', dest='data_dir', type=str,
                         help="Data folder containing the output of the training phase (pickle_files")
@@ -218,10 +282,15 @@ if __name__ == '__main__':
     parser.add_argument('--semantic_data', dest='semantic_dir', type=str,
                         help="Data folder containing the dictionaries about relation domains and ranges, and classes"
                              "for the entities; tipically it's the folder in which the raw dataset files are stored."
-                             "By default it is None, because by default the similarity function is the euclidean distance.",
+                             "By default it is None, because by default the similarity function is the euclidian distance.",
                         default=None)
     parser.add_argument('--multiprocessing', dest='multiproc_flag', type=bool,
                         help='enables multiprocessing, by default is not enabled',
+                        default=False)
+
+    parser.add_argument('--clustering', dest='clustering_path', type=str,
+                        help='Path to the clustering model. If you don\'t want to use clustering, don\'t provide this '
+                             'argument.',
                         default=False)
 
     global args
@@ -234,7 +303,7 @@ if __name__ == '__main__':
         exit()
 
     # più comodo per specificare gli args
-    if args.semantic_dir != None:
+    if args.semantic_dir:
         args.distance_type = 'semantic'
 
     save_dir = args.save_dir
@@ -242,6 +311,8 @@ if __name__ == '__main__':
         save_dir = f"{data_folder}{args.distance_type}/"
 
     args.save_dir = save_dir
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     if args.distance_type == 'semantic' and args.semantic_dir is None:
         print("You had to provide a folder (--semantic_data) in which there are three files: entity2class_dict.pkl, "
@@ -262,14 +333,25 @@ if __name__ == '__main__':
     ent, rel, inv, classes, domains, ranges = load_data(
         data_folder)  # classe, domains, ranges will be None if not semantic mode
     semantic_data.entity2class_dict = classes
+    if args.clustering_path:
+        with open(args.clustering_path, 'rb') as f:
+            clustering_model = pickle.load(f)
+        clusters_dict = embedding_cluster(ent, clustering_model)
     if args.multiproc_flag:
         manager1 = multiprocessing.Manager()
         return_dict = manager1.dict()
 
         processes_list = []
         log.info("Computing similarity between entities")
-        p1 = multiprocessing.Process(target=compute_sim_dictionary,
-                                     args=(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges))
+        if args.clustering_path:
+            target = compute_sim_dictionary_clustering
+            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, classes, domains, ranges)
+        else:
+            target = compute_sim_dictionary
+            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
+        p1 = multiprocessing.Process(
+            target=target,
+            args=arguments)
         processes_list.append(p1)
         p1.start()
         log.info("Computing similarity between relationships")
@@ -290,7 +372,10 @@ if __name__ == '__main__':
     else:
         return_dict = {}
         log.info("Computing similarity between entities")
-        compute_sim_dictionary(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
+        if args.clustering_path:
+            compute_sim_dictionary_clustering(ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, classes, domains, ranges)
+        else:
+            compute_sim_dictionary(ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
 
         log.info("Computing similarity between relationships")
         compute_sim_dictionary(rel, return_dict, "rel", args.distance_type, 'rel', classes, domains, ranges)
@@ -309,6 +394,6 @@ if __name__ == '__main__':
     save_data(sim_rel, save_path=f"{save_dir}/", filename="sim_rel.pkl")
     if args.distance_type != 'semantic':
         save_data(sim_inv_rel, save_path=f"{save_dir}/", filename="sim_inv_rel.pkl")
-    log.info(f"All data  stored in {save_dir}")
+    log.info(f"All data stored in {save_dir}")
 
     print()

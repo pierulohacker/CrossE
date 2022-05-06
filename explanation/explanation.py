@@ -16,7 +16,6 @@ def take(n, iterable):
 
 
 class DataManager():
-
     @staticmethod
     def reduce_predictions(list_of_pred, percentage):
         """
@@ -35,7 +34,7 @@ class DataManager():
             reduced_predictions.append(p[:limit_to])
         return reduced_predictions
 
-    def __init__(self, pickles_path, percentage_predictions):
+    def __init__(self, pickles_path, percentage_predictions, clustering):
         """
         Initialize the data needed for the explanation process
         :param pickles_path: (has to end with slash e.g C:/pickles/)the path of the folder containing the serialized objects in pickle format
@@ -115,7 +114,10 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__train_tr_h = pickle.load(f)
 
-        similarity_data_path = f"{pickles_path}{args.distance_type}/"
+        if clustering:
+            similarity_data_path = f"{pickles_path}{clustering}/{args.distance_type}/"
+        else:
+            similarity_data_path = f"{pickles_path}{args.distance_type}/"
         file_path = similarity_data_path + file_names[10]
         with open(file_path, 'rb') as f:
             self.__entity_id_sim = pickle.load(f)
@@ -306,7 +308,7 @@ class Explainer:
         :param tail_emb:
         :param emb_matrix:
         :param relationship: id of the relationship of the triple
-        :param sim_relationships: list of similar relationships relatioships for which to find a path
+        :param sim_relationships: list of similar relationships for which to find a path
         :param head: id of the head entity
         :param tail: id of the tail entity
         :param train_dicts: list of 2 dictionaries containing the training triples from head and tail perspective, respectively;
@@ -326,6 +328,8 @@ class Explainer:
         Sarà il modo in cui andremo a leggere i dati a cambiare per ogni tipologia
         """
         lock = RLock()  # to manage resources in the multithread path finder
+        actual_threads = 0
+        max_threads = 8
         if args.multithreading is True:
             thread_list = []
             for sim_rel in sim_relationships:
@@ -335,8 +339,16 @@ class Explainer:
                 t.start()
                 thread_list.append(t)
                 # multithread_path_find
-            for t in thread_list:
-                t.join()
+                actual_threads += 1
+                if actual_threads == max_threads:
+                    for thread in thread_list:
+                        thread.join()
+                    actual_threads = 0
+                    thread_list = []
+
+            if thread_list:  # se ce ne sono ancora da concludere
+                for thread in thread_list:
+                    thread.join()
         else:
             for sim_rel in sim_relationships:
                 self.__multithread_path_finder(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
@@ -613,7 +625,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
 
 
 def main(manager):
-    dataset = DataManager(args.data_dir, args.pred_perc)
+    dataset = DataManager(args.data_dir, args.pred_perc, args.clustering)
     log.info('Data loaded')
     log.info(
         "NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
@@ -697,6 +709,11 @@ if __name__ == '__main__':
                         help='choose the pre-computed distance/similarity to involve: euclidian, cosine',
                         default='euclidian')
 
+    parser.add_argument('--clustering', dest='clustering', type=str,
+                        help='Name of the folder containing the similarities files obtained through clustering. If you'
+                             'don\t want to use clustering, leave this argument as none',
+                        default=None)
+
     parser.add_argument('--pretty_print', dest='pretty_print_flag', type=bool,
                         help='if true, enable the pretty print of the explanations on the log file (requires much time',
                         default=False)
@@ -725,4 +742,4 @@ if __name__ == '__main__':
     manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
     start_time = time.time()  # better for windows, more accuracy
     main(manager)
-    log.debug("--- %s seconds ---" % (time.time() - start_time))
+    print("--- %s seconds ---" % (time.time() - start_time))
