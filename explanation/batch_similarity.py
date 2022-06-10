@@ -28,7 +28,7 @@ def load_data(pickle_folder: str):
     :param pickle_folder: folder containing the embeddings
     :return: data loaded in the form of list of lists; E.g ent_emb = [[emb1 numbs], [emb2 numbs], ...]
     """
-    file_names = ["ent_emb.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl",
+    file_names = ["DBPedia_selected.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl",
                   "rs_range2id_dict.pkl"]
     file_path = f"{pickle_folder}{file_names[0]}"
     with open(file_path, 'rb') as f:
@@ -186,6 +186,7 @@ def __top_sim_emb_clustering(emb, emb_id, embedding_dict, distance_type, obj_typ
     for i in embedding_dict.keys():
         if i != emb_id:
             other_rel = embedding_dict[i]
+            print(other_rel.shape)
             dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
             distances[i] = dst
 

@@ -2,7 +2,7 @@ import argparse
 import pickle
 import time
 from pathlib import Path
-
+from tqdm import tqdm
 from global_logger import Log
 import multiprocessing
 from itertools import islice
@@ -13,7 +13,6 @@ from threading import Thread, RLock
 def take(n, iterable):
     "Return first n items of the iterable as a list"
     return dict(islice(iterable, n))
-
 
 class DataManager():
     @staticmethod
@@ -301,7 +300,6 @@ class Explainer:
     def paths(self, head, relationship, sim_relationships, tail, train_dicts: list, similar_heads, similar_tails, args):
         """
         Looks for paths between head and tail via relationships provided in input; there are 6 paths that can be detected
-        :param return_dict: dictionary to store data using multiprocessing
         :param similar_tails:
         :param similar_heads:
         :param head_emb:
@@ -595,7 +593,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     """
     log = Log.get_logger()
     tripla_test = data.test_triples[num_tripla]
-    log.info(f"Processing predictions for test triple: {tripla_test}")
+    # log.info(f"Processing predictions for test triple: {tripla_test}")
     # ids
     test_head_id = tripla_test[0]
     rel_id = tripla_test[2]
@@ -656,7 +654,7 @@ def main(manager):
 
     else:  # senza multiprocessing
         paths_dictionary = dict()
-        for num_tripla in range(0, len(dataset.test_triples)):
+        for num_tripla in tqdm(range(0, len(dataset.test_triples))):
             main_process(dataset, num_tripla, explainer, paths_dictionary, args)
 
     log.info("Explanations computed.")
