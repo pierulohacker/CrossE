@@ -1,0 +1,7 @@
+2022-05-04 11:46:04.296 322:general                INFO   Distance type: euclidian
+2022-05-04 11:46:04.297 323:general                INFO   Save folder: ./save/WN18/out_data/pickle/clustering_8/euclidean
+2022-05-04 11:46:04.705 345:general                INFO   Computing similarity between entities
+2022-05-04 11:46:04.707 357:general                INFO   Computing similarity between relationships
+2022-05-04 11:46:04.709 363:general                INFO   Computing similarity between inverse relationships
+2022-05-04 12:10:50.776 392:general                INFO   Data computed, start saving...
+2022-05-04 12:10:50.788 397:general                INFO   All data stored in ./save/WN18/out_data/pickle/clustering_8/euclidean
