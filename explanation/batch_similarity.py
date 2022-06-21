@@ -4,6 +4,8 @@ to speed up the explanation process
 """
 import argparse
 import multiprocessing
+
+import sklearn.metrics.pairwise
 from tqdm import tqdm
 from pathlib import Path
 import pickle
@@ -28,7 +30,7 @@ def load_data(pickle_folder: str):
     :param pickle_folder: folder containing the embeddings
     :return: data loaded in the form of list of lists; E.g ent_emb = [[emb1 numbs], [emb2 numbs], ...]
     """
-    file_names = ["DBPedia_selected.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl",
+    file_names = ["ent_emb.pkl", "inv_rel_emb.pkl", "rel_emb.pkl", "entity2class_dict.pkl", "rs_domain2id_dict.pkl",
                   "rs_range2id_dict.pkl"]
     file_path = f"{pickle_folder}{file_names[0]}"
     with open(file_path, 'rb') as f:
@@ -70,7 +72,7 @@ def __euclidean(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains
     return np.linalg.norm(a - b)
 
 
-def __cosine(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains=None, ranges=None):
+def __cosine(a, b):
     """
     Computes the cosine similarity between a and b; the other paramas are not used, is only useful to simplify the code for semantic evaluations
     :param a: embedding a
@@ -136,6 +138,22 @@ def __semantic(emb_a, emb_b, id, other_id, obj_type, classes, domains, ranges):
         raise ValueError(f"obj_type can be either 'ent' or 'rel', not '{obj_type}'")
 
 
+def __semantic_callable(emb_a, emb_b, id, other_id, classes):
+    """
+    Callable for the semantic measure function
+    :param emb_a: embedding of the first entity/relation corresponding to 'id'
+    :param emb_b: embedding of the second entity/relation corresponding to 'id'
+    :param id: id of the entity/relationship
+    :param other_id: id of the other entity/relatioship
+    :return: similarity value
+    """
+    # if the object type is 'ent' we have to compute a simple jaccard index and euclidian distance if there is no domains
+    # prendiamo i dati delle entità riguardanti le classi
+    ent_sim = __jaccard(classes[id], classes[other_id])
+
+    return (0.2 * ent_sim) + (__cosine(emb_a, emb_b) * 0.8)
+
+
 def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classes=None, domains=None, ranges=None,
                   first_n=15):
     """
@@ -162,7 +180,8 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
         if i != emb_id:
             other_rel = embedding_matrix[i]
             dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
-
+            if dst < 0:
+                print(dst)
             distances[i] = dst
 
     if distance_type == 'cosine' or distance_type == 'semantic':
@@ -175,6 +194,7 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
 
 def __top_sim_emb_clustering(emb, emb_id, embedding_dict, distance_type, obj_type, classes=None, domains=None, ranges=None,
                   first_n=15):
+    # embedding_dict is a dictionary having as key the embedding id and as value the actual embedding. The dictionary contains the embedding belonging to the same cluster
     if distance_type == 'euclidian':
         distance_function = __euclidean
     elif distance_type == 'cosine':
@@ -186,7 +206,6 @@ def __top_sim_emb_clustering(emb, emb_id, embedding_dict, distance_type, obj_typ
     for i in embedding_dict.keys():
         if i != emb_id:
             other_rel = embedding_dict[i]
-            print(other_rel.shape)
             dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
             distances[i] = dst
 
@@ -218,7 +237,7 @@ def embedding_cluster(embeddings, clustering_model):
     The clustering method computes an array containing, at each position, the ID of the cluster to which the embedding
     in that position belongs. So the length of this list is the same as the number of embeddings. This function
     builds a dictionary where the keys are the cluster IDs and the values are dictionaries having embedding ID as key and
-    the actual embedding as value cluster. Suppose to have 4 embeddings and 2 clusters.embedding1 and embedding2 belong
+    the actual embedding as value. Suppose to have 4 embeddings and 2 clusters. embedding1 and embedding2 belong
     to cluster1, while embedding3 and embedding4 belong to cluster2. The output is
     {
        cluster1_id: {emb1_id: embedding1
@@ -228,7 +247,6 @@ def embedding_cluster(embeddings, clustering_model):
                      emb4_id: embedding4
                      }
     }
-
     """
     cluster_labels = clustering_model.labels_   # List of the labels of the clusters to which each embedding belongs
     labels_set = set(cluster_labels)
@@ -243,12 +261,44 @@ def embedding_cluster(embeddings, clustering_model):
     return clusters_dict
 
 
+def embedding_cluster_2(embeddings, clustering_model):
+    """
+    This function works the same way as the function above. Instead of considering only one cluster for each embedding,
+    it considers the two most probable clusters to which that embedding can belong. The code is different: the dictionary
+    has as key the embedding id and as value the two clusters to which it is most likely to belong
+    """
+    clusters_dict = {}
+    centers = clustering_model.cluster_centers_
+    for emb_id in tqdm(range(len(embeddings))):
+        emb = embeddings[emb_id]
+        emb = emb.reshape((1, emb.shape[0]))
+        dsts = []
+        for cc in centers:
+            dst = sklearn.metrics.pairwise.cosine_similarity(emb, cc.reshape((1, cc.shape[0])))[0][0]    #The [0][0] at the end is needed because for some reason sklearn returns an array containing another array which has as value the distance. We just need the distance
+            dsts.append(dst)
+        ids = np.argsort(dsts)[::-1][:2]        #Sort the dst array in descending way, instead of the values take their indices (which are the clusters ids) and pick only the first two
+        clusters_dict[emb_id] = ids
+    return clusters_dict
+
+
 def compute_sim_dictionary_clustering(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type,
                                       clusters_dict, classes=None, domains=None, ranges=None):
     similarity_dictionary = {}
     for emb_id in tqdm(range(len(embeddings))):
         for cluster_id in clusters_dict.keys():
             if emb_id in clusters_dict[cluster_id].keys():  # Retrieve the cluster to which the embedding belongs
+                similarity_dictionary[emb_id] = __top_sim_emb_clustering(embeddings[emb_id], emb_id,
+                                                                         clusters_dict[cluster_id],
+                                                                         distance_type, obj_type, classes, domains, ranges)
+    dict_multiproc[proc_name] = similarity_dictionary
+
+
+def compute_sim_dictionary_clustering_2(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type,
+                                        clusters_dict, clusters_dict_2, classes=None, domains=None, ranges=None):
+    similarity_dictionary = {}
+    for emb_id in tqdm(range(len(embeddings))):     # Ciclo per ogni embedding
+        for cluster_id in clusters_dict.keys():     # Per ogni embedding scandisco i cluster
+            if cluster_id in clusters_dict_2[emb_id]:   # Considero i due cluster più vicini all'embedding preso in questione
                 similarity_dictionary[emb_id] = __top_sim_emb_clustering(embeddings[emb_id], emb_id,
                                                                          clusters_dict[cluster_id],
                                                                          distance_type, obj_type, classes, domains, ranges)
@@ -338,6 +388,7 @@ if __name__ == '__main__':
         with open(args.clustering_path, 'rb') as f:
             clustering_model = pickle.load(f)
         clusters_dict = embedding_cluster(ent, clustering_model)
+        clusters_dict_2 = embedding_cluster_2(ent, clustering_model)
     if args.multiproc_flag:
         manager1 = multiprocessing.Manager()
         return_dict = manager1.dict()
@@ -345,8 +396,9 @@ if __name__ == '__main__':
         processes_list = []
         log.info("Computing similarity between entities")
         if args.clustering_path:
-            target = compute_sim_dictionary_clustering
-            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, classes, domains, ranges)
+            # target = compute_sim_dictionary_clustering
+            target = compute_sim_dictionary_clustering_2
+            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, clusters_dict_2, classes, domains, ranges)
         else:
             target = compute_sim_dictionary
             arguments = (ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
