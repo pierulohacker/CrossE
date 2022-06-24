@@ -1,6 +1,5 @@
 import argparse
 import pickle
-import time
 from pathlib import Path
 from tqdm import tqdm
 from global_logger import Log
@@ -738,6 +737,4 @@ if __name__ == '__main__':
     log.info("DISTANCE TYPE: %s" % args.distance_type)
     global manager  # dovrebbe aiutare con la interruzione prematura dei processi
     manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
-    start_time = time.time()  # better for windows, more accuracy
     main(manager)
-    print("--- %s seconds ---" % (time.time() - start_time))

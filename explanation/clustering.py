@@ -18,7 +18,7 @@ def save_clustering(cl, fname):
 def agglomerative_clustering(k, enembs, method='euclidean', linkage='ward'):
     for i in k:
         cl = AgglomerativeClustering(n_clusters=i, affinity=method, linkage=linkage).fit(enembs)
-        save_clustering(cl, "../Agglomerative_{}.pkl".format(i))
+        save_clustering(cl, "../agglomerative_DBP/{}/{}.pkl".format(method, i))
 
 
 def kmeans_clustering(k, enembs, method="auto"):
@@ -36,6 +36,7 @@ def kmedoids_clustering(k, enembs, metric, directory, mat):
         save_clustering(clustering, "{}/{}_{}.pkl".format(directory, i, metric))
 
 
+
 def create_distance_matrix_semantic(embs):
     with open("../datasets/DBpedia15k/entity2class_dict.pkl", 'rb') as f:
         classes = pickle.load(f)
@@ -49,9 +50,9 @@ def create_distance_matrix_semantic(embs):
     return mat
 
 if __name__ == "__main__":
-    enembs = load_embeddings('../save/WN18/out_data/pickle/ent_emb.pkl')
-    r = [8,10,15]
-    kmedoids_clustering(r, enembs, 'euclidean', '../KMedoids_WN18', None)
+    enembs = load_embeddings('../save/DBpedia15k/out_data/pickle/ent_emb.pkl')
+    r = [9]
+    agglomerative_clustering(r, enembs, 'cosine', 'complete')
 
     #mat = create_distance_matrix_semantic(enembs)
     #np.save("semantic_matrix", mat)

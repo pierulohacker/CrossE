@@ -388,7 +388,7 @@ if __name__ == '__main__':
         with open(args.clustering_path, 'rb') as f:
             clustering_model = pickle.load(f)
         clusters_dict = embedding_cluster(ent, clustering_model)
-        clusters_dict_2 = embedding_cluster_2(ent, clustering_model)
+        #clusters_dict_2 = embedding_cluster_2(ent, clustering_model)
     if args.multiproc_flag:
         manager1 = multiprocessing.Manager()
         return_dict = manager1.dict()
@@ -396,9 +396,10 @@ if __name__ == '__main__':
         processes_list = []
         log.info("Computing similarity between entities")
         if args.clustering_path:
-            # target = compute_sim_dictionary_clustering
-            target = compute_sim_dictionary_clustering_2
-            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, clusters_dict_2, classes, domains, ranges)
+            target = compute_sim_dictionary_clustering
+            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, classes, domains, ranges)
+            '''target = compute_sim_dictionary_clustering_2
+            arguments = (ent, return_dict, "ent", args.distance_type, 'ent', clusters_dict, clusters_dict_2, classes, domains, ranges)'''
         else:
             target = compute_sim_dictionary
             arguments = (ent, return_dict, "ent", args.distance_type, 'ent', classes, domains, ranges)
