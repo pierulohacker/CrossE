@@ -72,7 +72,7 @@ def __euclidean(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains
     return np.linalg.norm(a - b)
 
 
-def __cosine(a, b):
+def __cosine(a, b, id_a=None, id_b=None, obj_type=None, classes=None, domains=None, ranges=None):
     """
     Computes the cosine similarity between a and b; the other paramas are not used, is only useful to simplify the code for semantic evaluations
     :param a: embedding a
@@ -180,8 +180,6 @@ def __top_sim_emb(emb, emb_id, embedding_matrix, distance_type, obj_type, classe
         if i != emb_id:
             other_rel = embedding_matrix[i]
             dst = distance_function(other_rel, emb, emb_id, i, obj_type, classes, domains, ranges)
-            if dst < 0:
-                print(dst)
             distances[i] = dst
 
     if distance_type == 'cosine' or distance_type == 'semantic':
@@ -450,4 +448,4 @@ if __name__ == '__main__':
         save_data(sim_inv_rel, save_path=f"{save_dir}/", filename="sim_inv_rel.pkl")
     log.info(f"All data stored in {save_dir}")
 
-    print()
+    #python batch_similarity.py --data ../save/WN18/out_data/pickle/ --distance euclidian --clustering ../wn18clustering/KMeans_8.pkl

@@ -660,6 +660,10 @@ def main(manager):
     log.info("Computing the performances evaluation")
 
     recall, avg_sup_type = evaluation(paths_dictionary)
+    with open("results.txt", "w") as f:
+        f.write(f"Recall: {recall}")
+        f.write(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
+
     log.info(f"Recall: {recall}")
     log.info(
         f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
@@ -738,3 +742,4 @@ if __name__ == '__main__':
     global manager  # dovrebbe aiutare con la interruzione prematura dei processi
     manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
     main(manager)
+# python3 explanation/explanation.py --data ./save/FB15K/out_data/pickle/ --clustering agglomerative/10 --save_dir explanation/results/WN18/euclidian/8kmeans/2perc/ --distance euclidian --predictions_perc 2

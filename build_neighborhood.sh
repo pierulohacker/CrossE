@@ -1,0 +1,3 @@
+python3 explanation/batch_similarity.py --data ./save/FB15k/out_data/pickle/ --save_dir ./save/FB15k/out_data/pickle/agglomerative/8/euclidian/ --clustering agglomerative_FB15k/euclidian/8.pkl --multiprocessing True 
+python3 explanation/batch_similarity.py --data ./save/FB15k/out_data/pickle/ --save_dir ./save/FB15k/out_data/pickle/agglomerative/10/euclidian/ --clustering agglomerative_FB15k/euclidian/10.pkl --multiprocessing True 
+python3 explanation/batch_similarity.py --data ./save/FB15k/out_data/pickle/ --save_dir ./save/FB15k/out_data/pickle/agglomerative/15/euclidian/ --clustering agglomerative_FB15k/euclidian/15.pkl --multiprocessing True 
