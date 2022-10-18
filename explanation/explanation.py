@@ -242,7 +242,6 @@ class Explainer:
         :return: list of ids of the top_k most similar objects to emb
         """
         list_all_similaties = similarity_dict[emb_id]
-
         return list_all_similaties[:top_k]
 
     def __tails(self, head, rel, train_dict):
@@ -385,8 +384,8 @@ class Explainer:
             for sim_h in similar_heads:
                 for sim_t in similar_tails:
                     # controllare collegamento diretto tra le due entità simili attraverso la rel. originale +
-                    if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h, sim_rel,
-                                                                                               sim_t, hr_t):
+                    if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                            and self.direct_path(sim_h, sim_rel, sim_t, hr_t):
                         expl.add_support_path([sim_h, relationship, sim_t], [sim_h, sim_rel, sim_t])
             if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
                 with lock:
@@ -399,8 +398,8 @@ class Explainer:
             for sim_h in similar_heads:
                 for sim_t in similar_tails:
                     # controllare collegamento diretto tra le due entità simili attraverso la rel. originale + tra loro con rel simile
-                    if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_t, sim_rel,
-                                                                                               sim_h, hr_t):
+                    if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                            and self.direct_path(sim_t, sim_rel, sim_h, hr_t):
                         expl.add_support_path([sim_h, relationship, sim_t], [sim_t, sim_rel, sim_h])
 
             if expl.support_paths:
@@ -409,7 +408,6 @@ class Explainer:
 
         ent_to_h = self.__tails(head, sim_rel,
                                 tr_h)  # NB __tails in questo caso prende tutte le ent che puntano ad h
-
         ent_from_h = self.__tails(head, sim_rel, hr_t)  # entità puntate da h attraverso rel
         rel_ingoing_t = self.__relations(tail, tr_h)  # relazioni entranti in tail
         rel_outgoing_t = self.__relations(tail, hr_t)  # relazioni uscenti da tail
@@ -425,11 +423,9 @@ class Explainer:
                         e_to_hs = self.__tails(sim_h, sim_rel, tr_h)  # entità che vanno in hs
                         for sim_t in similar_tails:
                             for sim_e in e_to_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_e,
-                                                                                                           sim_rel,
-                                                                                                           sim_h,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_e, r, sim_t, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_e, sim_rel, sim_h, hr_t) \
+                                        and self.direct_path(sim_e, r, sim_t, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
 
@@ -446,11 +442,9 @@ class Explainer:
                         e_to_hs = self.__tails(sim_h, sim_rel, tr_h)  # entità che vanno in hs
                         for sim_t in similar_tails:
                             for sim_e in e_to_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_e,
-                                                                                                           sim_rel,
-                                                                                                           sim_h,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_t, r, sim_e, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_e, sim_rel, sim_h, hr_t) \
+                                        and self.direct_path(sim_t, r, sim_e, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
                     if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
@@ -468,11 +462,9 @@ class Explainer:
                         e_from_hs = self.__tails(sim_h, sim_rel, hr_t)  # entità a cui punta hs
                         for sim_t in similar_tails:
                             for sim_e in e_from_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h,
-                                                                                                           sim_rel,
-                                                                                                           sim_e,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_e, r, sim_t, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_h, sim_rel, sim_e, hr_t) \
+                                        and self.direct_path(sim_e, r, sim_t, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
                     if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
@@ -487,11 +479,9 @@ class Explainer:
                         e_from_hs = self.__tails(sim_h, sim_rel, hr_t)  # entità a cui punta hs
                         for sim_t in similar_tails:
                             for sim_e in e_from_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h,
-                                                                                                           sim_rel,
-                                                                                                           sim_e,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_t, r, sim_e, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_h, sim_rel, sim_e, hr_t) \
+                                        and self.direct_path(sim_t, r, sim_e, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
                     if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
@@ -570,7 +560,6 @@ def evaluation(paths_dict=None):
                             expl_per_type[type] = num_expl
 
     recall = predictions_with_expl / predictions
-    # print(recall)
 
     # avg support
     # supporto medio sulle triple per cui vi è almeno una spiegazione
@@ -593,7 +582,6 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     log = Log.get_logger()
     tripla_test = data.test_triples[num_tripla]
     # log.info(f"Processing predictions for test triple: {tripla_test}")
-    # ids
     test_head_id = tripla_test[0]
     rel_id = tripla_test[2]
     # embeddings of the test triple
@@ -608,7 +596,6 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     sim_heads = explainer.top_sim_emb(test_head_id, data.entities_similarities_dict, top_k=args.top_ent)
 
     paths_for_pred = {}  # dict contenente {num_pred: paths, num_pred1: path1} k = indice per tail_predictions, v = prediction_paths
-
     for num_pred in range(0, len(tail_predictions)):
         predicted_tail_id = tail_predictions[num_pred]
         # le code simili servono per la ricerca di spiegazioni a supporto
