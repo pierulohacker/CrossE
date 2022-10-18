@@ -22,7 +22,7 @@ def agglomerative_clustering(k, enembs, method, dest):
     method: Algorithm used to compute the distance between embedding. More info here, at the 'affinity' field --> https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
     """
     cl = AgglomerativeClustering(n_clusters=k, affinity=method, linkage='ward').fit(enembs)
-    save_clustering(cl, "{}/agglomerative_FB15k/{}/{}.pkl".format(dest, method, k))
+    save_clustering(cl, "{}/agglomerative/{}/{}.pkl".format(dest, method, k))
 
 
 def kmeans_clustering(k, enembs, dest):
