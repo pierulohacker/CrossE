@@ -132,7 +132,5 @@ of the original paper of CrossE. To execute the explanation process it is necess
             - for **WN18** `python3 explanation/explanation.py --data ./save/WN18/out_data/pickle/ --save_dir explanation/results/WN18/cosine/5perc/ --predictions_perc 5 --distance cosine`
        
             - for **DBpediaYAGO** `python3 explanation/explanation.py --data ./save/save_DBpediaYAGO/out_data/pickle/ --save_dir explanation/results/save_DBpediaYAGO/cosine/5perc/ --predictions_perc 5 --distance cosine`
-Provare KDtree
-Adattare misura di similarità adottata nel clustering alla misura che sarà usata per trovare gli embedding vicini
-Tenere traccia del numero di confronti
-Fare la ricerca prima in un unico cluster, poi in due
+<br /><br /><br />
+The `results_with_clustering.pdf` document contains the tables reporting the results of the explanation process executed with the two clustering methods (k-means and agglomerative).
