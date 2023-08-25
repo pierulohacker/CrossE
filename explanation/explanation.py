@@ -17,7 +17,7 @@ class DataManager():
     @staticmethod
     def reduce_predictions(list_of_pred, percentage):
         """
-        Reduce the list of arrays o predictions given in input maintaing only a specified percentage of predictions
+        Reduce the list of arrays o predictions given in input maintaining only a specified percentage of predictions
         :param list_of_pred: list of arrays; each element of the list correspond to the predictions obtained for the test
         triple corresponding to the list id
         :param percentage: percentage of predictions to maintain
@@ -64,30 +64,6 @@ class DataManager():
                       "test_predicted_tails.pkl", "test_tr_h.pkl", "test_triples.pkl", "train_hr_t.pkl",
                       "train_tr_h.pkl", "sim_entities.pkl", "sim_rel.pkl", "sim_inv_rel.pkl"]
 
-        """file_path = pickles_path + file_names[0]
-        with open(file_path, 'rb') as f:
-            self.__entity_emb = pickle.load(f)
-        file_path = pickles_path + file_names[1]
-        with open(file_path, 'rb') as f:
-            self.__inv_rel = pickle.load(f)
-
-        file_path = pickles_path + file_names[2]
-        with open(file_path, 'rb') as f:
-            self.__rel_emb = pickle.load(f)"""
-
-        """ NOT USED
-        file_path = pickles_path + file_names[3]
-        with open(file_path, 'rb') as f:
-            self.__test_hr_t = pickle.load(f)"""
-
-        """ NOT USED
-        file_path = pickles_path + file_names[4]
-        with open(file_path, 'rb') as f:
-            self.__test_predicted_heads = pickle.load(f)
-        # reduction of predictions
-        self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads,
-                                                                     percentage_predictions)"""
-
         file_path = pickles_path + file_names[5]
         with open(file_path, 'rb') as f:
             self.__test_predicted_tails = pickle.load(f)
@@ -95,10 +71,6 @@ class DataManager():
         self.__test_predicted_tails = DataManager.reduce_predictions(self.__test_predicted_tails,
                                                                      percentage_predictions)
 
-        """ NOT USED
-        file_path = pickles_path + file_names[6]
-        with open(file_path, 'rb') as f:
-            self.__test_tr_h = pickle.load(f)"""
 
         file_path = pickles_path + file_names[7]
         with open(file_path, 'rb') as f:
@@ -610,6 +582,7 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
 
 def main(manager):
     dataset = DataManager(args.data_dir, args.pred_perc, args.clustering)
+    print(len(dataset.test_triples))
     log.info('Data loaded')
     log.info(
         "NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")

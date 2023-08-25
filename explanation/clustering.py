@@ -1,9 +1,11 @@
+import argparse
+import numpy as np
 import pickle
+from tqdm import tqdm
+import time
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from batch_similarity import __semantic_callable
-import numpy as np
-from tqdm import tqdm
-import argparse
+
 
 def load_embeddings(fname):
     with open(fname, 'rb') as f:
@@ -75,4 +77,6 @@ if __name__ == "__main__":
     parser.add_argument("--type", required=True, type=str, choices=["kmeans", "agglomerative"])
     parser.add_argument("--method", required=False, type=str, help="This argument is used only when performing agglomerative clustering")
     args = parser.parse_args()
+    now = time.time()
     main(args)
+    print("Elapsed time: {}".format(time.time()-now))

@@ -4,16 +4,15 @@ to speed up the explanation process
 """
 import argparse
 import multiprocessing
-
-import sklearn.metrics.pairwise
-from tqdm import tqdm
-from pathlib import Path
-import pickle
 import numpy as np
+import os
+import pickle
 from global_logger import Log
 from numpy import dot
 from numpy.linalg import norm
-import os
+from pathlib import Path
+from tqdm import tqdm
+
 
 class semantic_data:
     """
@@ -258,45 +257,12 @@ def embedding_cluster(embeddings, clustering_model):
         clusters_dict[label] = d
     return clusters_dict
 
-
-def embedding_cluster_2(embeddings, clustering_model):
-    """
-    This function works the same way as the function above. Instead of considering only one cluster for each embedding,
-    it considers the two most probable clusters to which that embedding can belong. The code is different: the dictionary
-    has as key the embedding id and as value the two clusters to which it is most likely to belong
-    """
-    clusters_dict = {}
-    centers = clustering_model.cluster_centers_
-    for emb_id in tqdm(range(len(embeddings))):
-        emb = embeddings[emb_id]
-        emb = emb.reshape((1, emb.shape[0]))
-        dsts = []
-        for cc in centers:
-            dst = sklearn.metrics.pairwise.cosine_similarity(emb, cc.reshape((1, cc.shape[0])))[0][0]    #The [0][0] at the end is needed because for some reason sklearn returns an array containing another array which has as value the distance. We just need the distance
-            dsts.append(dst)
-        ids = np.argsort(dsts)[::-1][:2]        #Sort the dst array in descending way, instead of the values take their indices (which are the clusters ids) and pick only the first two
-        clusters_dict[emb_id] = ids
-    return clusters_dict
-
-
 def compute_sim_dictionary_clustering(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type,
                                       clusters_dict, classes=None, domains=None, ranges=None):
     similarity_dictionary = {}
     for emb_id in tqdm(range(len(embeddings))):
         for cluster_id in clusters_dict.keys():
             if emb_id in clusters_dict[cluster_id].keys():  # Retrieve the cluster to which the embedding belongs
-                similarity_dictionary[emb_id] = __top_sim_emb_clustering(embeddings[emb_id], emb_id,
-                                                                         clusters_dict[cluster_id],
-                                                                         distance_type, obj_type, classes, domains, ranges)
-    dict_multiproc[proc_name] = similarity_dictionary
-
-
-def compute_sim_dictionary_clustering_2(embeddings: list, dict_multiproc, proc_name, distance_type, obj_type,
-                                        clusters_dict, clusters_dict_2, classes=None, domains=None, ranges=None):
-    similarity_dictionary = {}
-    for emb_id in tqdm(range(len(embeddings))):     # Ciclo per ogni embedding
-        for cluster_id in clusters_dict.keys():     # Per ogni embedding scandisco i cluster
-            if cluster_id in clusters_dict_2[emb_id]:   # Considero i due cluster più vicini all'embedding preso in questione
                 similarity_dictionary[emb_id] = __top_sim_emb_clustering(embeddings[emb_id], emb_id,
                                                                          clusters_dict[cluster_id],
                                                                          distance_type, obj_type, classes, domains, ranges)

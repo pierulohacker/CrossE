@@ -78,12 +78,13 @@ of the original paper of CrossE. To execute the explanation process it is necess
     will be done inside the cluster that embedding belongs to. Without clustering, this search would be conducted in the whole space, requiring more time. <br>
     You can choose between
     **KMeans clustering** and **agglomerative clustering**. For both the techniques, tests were made considering **8**, **10**, **15** clusters, but you can create as many as you want. <br>
-  - Create the clustering model by running the file explanation/clustering.py. Suppose we want to group the DBPedia15k entity embeddings in 10 clusters using the kmeans method 
+  - Create the clustering model by running the file explanation/clustering.py. In our experiments, learning the clustering models was pretty fast, and took
+    an amount of time in the order of the seconds.
+    Suppose we want to group the DBPedia15k entity embeddings in 10 clusters using the kmeans method 
               and want to save them in the `clustering_DBPedia` folder. The command to run is: 
     - `python explanation/clustering.py --path_to_embs save/DBpedia15k/out_data/pickle/ent_emb.pkl --k 10 --dest clustering_DBPedia/ --type kmeans`
   - Now suppose that we want to use the previously created clustering model and save the results in `save/DBpedia15k/out_data/pickle/kmeans_8/euclidian/`. The command to run is
     - `python3 explanation/batch_similarity.py --data ./save/DBpedia15k/out_data/pickle/ --save_dir ./save/DBpedia15k/out_data/pickle/kmeans_8/euclidian/ --clustering clustering_DBPedia/KMeans_10.pkl`
-
    
 5. Run the explanation process
    
