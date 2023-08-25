@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
 import pickle
-from tqdm import tqdm
 import time
-from sklearn.cluster import KMeans, AgglomerativeClustering
 from batch_similarity import __semantic_callable
+from tqdm import tqdm
+from sklearn.cluster import KMeans, AgglomerativeClustering
 
 
 def load_embeddings(fname):
