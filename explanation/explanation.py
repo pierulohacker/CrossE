@@ -1,12 +1,10 @@
 import argparse
-import pickle
-import time
-from pathlib import Path
-
-from global_logger import Log
 import multiprocessing
+import pickle
+from global_logger import Log
 from itertools import islice
-
+from pathlib import Path
+from tqdm import tqdm
 from threading import Thread, RLock
 
 
@@ -14,13 +12,11 @@ def take(n, iterable):
     "Return first n items of the iterable as a list"
     return dict(islice(iterable, n))
 
-
 class DataManager():
-
     @staticmethod
     def reduce_predictions(list_of_pred, percentage):
         """
-        Reduce the list of arrays o predictions given in input maintaing only a specified percentage of predictions
+        Reduce the list of arrays o predictions given in input maintaining only a specified percentage of predictions
         :param list_of_pred: list of arrays; each element of the list correspond to the predictions obtained for the test
         triple corresponding to the list id
         :param percentage: percentage of predictions to maintain
@@ -35,7 +31,7 @@ class DataManager():
             reduced_predictions.append(p[:limit_to])
         return reduced_predictions
 
-    def __init__(self, pickles_path, percentage_predictions):
+    def __init__(self, pickles_path, percentage_predictions, clustering):
         """
         Initialize the data needed for the explanation process
         :param pickles_path: (has to end with slash e.g C:/pickles/)the path of the folder containing the serialized objects in pickle format
@@ -67,41 +63,12 @@ class DataManager():
                       "test_predicted_tails.pkl", "test_tr_h.pkl", "test_triples.pkl", "train_hr_t.pkl",
                       "train_tr_h.pkl", "sim_entities.pkl", "sim_rel.pkl", "sim_inv_rel.pkl"]
 
-        """file_path = pickles_path + file_names[0]
-        with open(file_path, 'rb') as f:
-            self.__entity_emb = pickle.load(f)
-        file_path = pickles_path + file_names[1]
-        with open(file_path, 'rb') as f:
-            self.__inv_rel = pickle.load(f)
-
-        file_path = pickles_path + file_names[2]
-        with open(file_path, 'rb') as f:
-            self.__rel_emb = pickle.load(f)"""
-
-        """ NOT USED
-        file_path = pickles_path + file_names[3]
-        with open(file_path, 'rb') as f:
-            self.__test_hr_t = pickle.load(f)"""
-
-        """ NOT USED
-        file_path = pickles_path + file_names[4]
-        with open(file_path, 'rb') as f:
-            self.__test_predicted_heads = pickle.load(f)
-        # reduction of predictions
-        self.__test_predicted_heads = DataManager.reduce_predictions(self.__test_predicted_heads,
-                                                                     percentage_predictions)"""
-
         file_path = pickles_path + file_names[5]
         with open(file_path, 'rb') as f:
             self.__test_predicted_tails = pickle.load(f)
         # reduction of tail predictions
         self.__test_predicted_tails = DataManager.reduce_predictions(self.__test_predicted_tails,
                                                                      percentage_predictions)
-
-        """ NOT USED
-        file_path = pickles_path + file_names[6]
-        with open(file_path, 'rb') as f:
-            self.__test_tr_h = pickle.load(f)"""
 
         file_path = pickles_path + file_names[7]
         with open(file_path, 'rb') as f:
@@ -115,7 +82,10 @@ class DataManager():
         with open(file_path, 'rb') as f:
             self.__train_tr_h = pickle.load(f)
 
-        similarity_data_path = f"{pickles_path}{args.distance_type}/"
+        if clustering:
+            similarity_data_path = f"{pickles_path}{clustering}/{args.distance_type}/"
+        else:
+            similarity_data_path = f"{pickles_path}{args.distance_type}/"
         file_path = similarity_data_path + file_names[10]
         with open(file_path, 'rb') as f:
             self.__entity_id_sim = pickle.load(f)
@@ -186,10 +156,9 @@ class DataManager():
 class Explainer:
     class Explanation:
         """
-        Classe innestata, adibita alla creazione di oggetti spiegazione: un oggetto spiegazione corrisponde a una tripla (h,r,t)
-        o un path (h,r,e,r',t) e una serie di triple che danno supporto ad essa
+        Nested class used for creating explanation object: an explanation object is a triple (h, r, t) or a path
+        (h,r,e,r',t) with a series of triples that support the explanation
         """
-
         def __init__(self, path, support_paths=None):
             """
             :param path: path found for the explanation
@@ -223,7 +192,7 @@ class Explainer:
             self.__support_paths.append([sup_triple, similar_path])
 
         def __str__(self):
-            """Stampa un oggetto explanation come spiegazione - esempio simile - supporto"""
+            """Print an explaanation obnect as explanation - similar example - support"""
             stringa = ""
             stringa += (f"\tExplanation: {self.__path}")
             stringa += (f"\n\t\tSupports: ")
@@ -242,7 +211,6 @@ class Explainer:
         :return: list of ids of the top_k most similar objects to emb
         """
         list_all_similaties = similarity_dict[emb_id]
-
         return list_all_similaties[:top_k]
 
     def __tails(self, head, rel, train_dict):
@@ -299,14 +267,13 @@ class Explainer:
     def paths(self, head, relationship, sim_relationships, tail, train_dicts: list, similar_heads, similar_tails, args):
         """
         Looks for paths between head and tail via relationships provided in input; there are 6 paths that can be detected
-        :param return_dict: dictionary to store data using multiprocessing
         :param similar_tails:
         :param similar_heads:
         :param head_emb:
         :param tail_emb:
         :param emb_matrix:
         :param relationship: id of the relationship of the triple
-        :param sim_relationships: list of similar relationships relatioships for which to find a path
+        :param sim_relationships: list of similar relationships for which to find a path
         :param head: id of the head entity
         :param tail: id of the tail entity
         :param train_dicts: list of 2 dictionaries containing the training triples from head and tail perspective, respectively;
@@ -319,13 +286,13 @@ class Explainer:
         paths_expl = {1: [], 2: [], 3: [], 4: [], 5: [], 6: []}
         # looking for the similar entities to the head and to the tail
         """
-        paths_expl conterrà le spiegazioni di 6 tipologie diverse per ogni predizione della tripla passata in input;
-        per il tipo 1 conterrà una lista di triple 1:[[h,rs,t]] e analogamente anche il tipo 2
-        tipo 3 avremo 3:[[h,rs,e',r',t], [h,rs,e',r',t],...] e saranno lette come h <--rs-- e' --r'--> t
-        etc.
-        Sarà il modo in cui andremo a leggere i dati a cambiare per ogni tipologia
+        paths_expl will contain the explanations of 6 different typologies for each prediction of the input triple;
+        for type 1 it will contain a list of 1-triples:[[h,rs,t]]. The same applies for type 2. For type 3 we will have
+        [[h,rs,e',r',t], [h,rs,e',r',t],...], which are read as: h <--rs-- e' --r'--> t
         """
         lock = RLock()  # to manage resources in the multithread path finder
+        actual_threads = 0
+        max_threads = 8
         if args.multithreading is True:
             thread_list = []
             for sim_rel in sim_relationships:
@@ -335,8 +302,16 @@ class Explainer:
                 t.start()
                 thread_list.append(t)
                 # multithread_path_find
-            for t in thread_list:
-                t.join()
+                actual_threads += 1
+                if actual_threads == max_threads:
+                    for thread in thread_list:
+                        thread.join()
+                    actual_threads = 0
+                    thread_list = []
+
+            if thread_list:  # se ce ne sono ancora da concludere
+                for thread in thread_list:
+                    thread.join()
         else:
             for sim_rel in sim_relationships:
                 self.__multithread_path_finder(head, sim_rel, tail, hr_t, similar_heads, similar_tails, relationship,
@@ -375,11 +350,11 @@ class Explainer:
             # FIND SUPPORT
             for sim_h in similar_heads:
                 for sim_t in similar_tails:
-                    # controllare collegamento diretto tra le due entità simili attraverso la rel. originale +
-                    if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h, sim_rel,
-                                                                                               sim_t, hr_t):
+                    # check for direct link between the similar entities through the original relationship
+                    if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                            and self.direct_path(sim_h, sim_rel, sim_t, hr_t):
                         expl.add_support_path([sim_h, relationship, sim_t], [sim_h, sim_rel, sim_t])
-            if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
+            if expl.support_paths:  # if at least one support was found, the explanation is saved
                 with lock:
                     paths_expl[1].append(expl)
 
@@ -389,9 +364,9 @@ class Explainer:
             # FIND SUPPORT
             for sim_h in similar_heads:
                 for sim_t in similar_tails:
-                    # controllare collegamento diretto tra le due entità simili attraverso la rel. originale + tra loro con rel simile
-                    if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_t, sim_rel,
-                                                                                               sim_h, hr_t):
+                    # check for direct link between the similar entities through the original relationship + among them with similar rel
+                    if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                            and self.direct_path(sim_t, sim_rel, sim_h, hr_t):
                         expl.add_support_path([sim_h, relationship, sim_t], [sim_t, sim_rel, sim_h])
 
             if expl.support_paths:
@@ -399,11 +374,10 @@ class Explainer:
                     paths_expl[2].append(expl)
 
         ent_to_h = self.__tails(head, sim_rel,
-                                tr_h)  # NB __tails in questo caso prende tutte le ent che puntano ad h
-
-        ent_from_h = self.__tails(head, sim_rel, hr_t)  # entità puntate da h attraverso rel
-        rel_ingoing_t = self.__relations(tail, tr_h)  # relazioni entranti in tail
-        rel_outgoing_t = self.__relations(tail, hr_t)  # relazioni uscenti da tail
+                                tr_h)  # NB __tails in this case takes all the entities that point at h
+        ent_from_h = self.__tails(head, sim_rel, hr_t)  # entities pointed by h through rel
+        rel_ingoing_t = self.__relations(tail, tr_h)  # incoming relationships in tail
+        rel_outgoing_t = self.__relations(tail, hr_t)  # outgoing relationships from tail
 
         # Type 3 (h <--rs-- e' --r'--> t)
         for e in ent_to_h:
@@ -413,79 +387,70 @@ class Explainer:
                 if self.direct_path(tail, r, e, tr_h):
                     expl = self.Explanation([head, sim_rel, e, r, tail])
                     for sim_h in similar_heads:
-                        e_to_hs = self.__tails(sim_h, sim_rel, tr_h)  # entità che vanno in hs
+                        e_to_hs = self.__tails(sim_h, sim_rel, tr_h)  # entities going in hs
                         for sim_t in similar_tails:
                             for sim_e in e_to_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_e,
-                                                                                                           sim_rel,
-                                                                                                           sim_h,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_e, r, sim_t, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_e, sim_rel, sim_h, hr_t) \
+                                        and self.direct_path(sim_e, r, sim_t, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
 
-                    if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
+                    if expl.support_paths:
                         with lock:
                             paths_expl[3].append(expl)
-            # (h <--rs-- e' <--r'-- t) tipo 4 insieme al 3 dato che il primo for è uguale
-            for r in rel_outgoing_t:  # per ogni rel uscente da t
-                # verifica che t vada in e
+            # (h <--rs-- e' <--r'-- t) tipo 4 together with type 3 since the first for is the same
+            for r in rel_outgoing_t:
                 # paths_expl[4] = paths_expl[4] + self.direct_path(tail, r, e, hr_t)
                 if self.direct_path(tail, r, e, hr_t):
                     expl = self.Explanation([head, sim_rel, e, r, tail])
                     for sim_h in similar_heads:
-                        e_to_hs = self.__tails(sim_h, sim_rel, tr_h)  # entità che vanno in hs
+                        e_to_hs = self.__tails(sim_h, sim_rel, tr_h)
                         for sim_t in similar_tails:
                             for sim_e in e_to_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_e,
-                                                                                                           sim_rel,
-                                                                                                           sim_h,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_t, r, sim_e, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_e, sim_rel, sim_h, hr_t) \
+                                        and self.direct_path(sim_t, r, sim_e, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
-                    if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
+                    if expl.support_paths:
                         with lock:
                             paths_expl[4].append(expl)
 
         # type 5 and 6
         # (h --rs--> e' --r'--> t)
-        for e in ent_from_h:  # e' = una qualsiasi entità nel mezzo puntata da h
-            for r in rel_ingoing_t:  # per ogni relazione entrante in t
+        for e in ent_from_h:  # e' = any in-between entity pointed by h
+            for r in rel_ingoing_t:  # for each incoming relationship in t
                 # paths_expl[5] = paths_expl[5] + self.direct_path(tail, r, e, tr_h)
                 if self.direct_path(tail, r, e, tr_h):
                     expl = self.Explanation([head, sim_rel, e, r, tail])
                     for sim_h in similar_heads:
-                        e_from_hs = self.__tails(sim_h, sim_rel, hr_t)  # entità a cui punta hs
+                        e_from_hs = self.__tails(sim_h, sim_rel, hr_t)  # entity to which hs points
                         for sim_t in similar_tails:
                             for sim_e in e_from_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h,
-                                                                                                           sim_rel,
-                                                                                                           sim_e,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_e, r, sim_t, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_h, sim_rel, sim_e, hr_t) \
+                                        and self.direct_path(sim_e, r, sim_t, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
-                    if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
+                    if expl.support_paths:
                         with lock:
                             paths_expl[5].append(expl)
 
-            for r in rel_outgoing_t:  # per ogni relazione uscente da t
+            for r in rel_outgoing_t:
                 # paths_expl[6] = paths_expl[6] + self.direct_path(tail, r, e, hr_t)
                 if self.direct_path(tail, r, e, hr_t):
                     expl = self.Explanation([head, sim_rel, e, r, tail])
                     for sim_h in similar_heads:
-                        e_from_hs = self.__tails(sim_h, sim_rel, hr_t)  # entità a cui punta hs
+                        e_from_hs = self.__tails(sim_h, sim_rel, hr_t)
                         for sim_t in similar_tails:
                             for sim_e in e_from_hs:
-                                if self.direct_path(sim_h, relationship, sim_t, hr_t) and self.direct_path(sim_h,
-                                                                                                           sim_rel,
-                                                                                                           sim_e,
-                                                                                                           hr_t) and self.direct_path(
-                                    sim_t, r, sim_e, hr_t):
+                                if self.direct_path(sim_h, relationship, sim_t, hr_t) \
+                                        and self.direct_path(sim_h, sim_rel, sim_e, hr_t) \
+                                        and self.direct_path(sim_t, r, sim_e, hr_t):
                                     expl.add_support_path([sim_h, relationship, sim_t],
                                                           [sim_h, sim_rel, sim_e, r, sim_t])
-                    if expl.support_paths:  # solo se si è trovato almeno un supporto si andrà a salvare la spiegazione
+                    if expl.support_paths:
                         with lock:
                             paths_expl[6].append(expl)
 
@@ -504,15 +469,14 @@ def pretty_print(paths_dict, data: DataManager):
         head = test_triple[0]
         rel = test_triple[2]
         for pred_index in paths_dict[triple_test_index].keys():
-            # log.debug(f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
             explanations = paths_dict[triple_test_index][pred_index]
             if explanations != {None}:
                 log.debug(
                     f"\tSpiegazioni per la predizione ({head} --{rel}--> {data.test_predicted_tails[triple_test_index][pred_index]})")
-                # siamo nel dizionario che contiene le diverse tipologie di path
+                # dictionary that contains the different path typologies
                 log.debug(explanations)
                 for k in explanations.keys():
-                    if explanations[k]:  # = se non è vuota la lista di quella tipologia di spiegazioni
+                    if explanations[k]:
                         log.debug(f"Type {k}:")
                         [log.debug(e) for e in explanations[k]]
 
@@ -533,38 +497,28 @@ def evaluation(paths_dict=None):
         rel = test_triple[2]"""
 
         for pred_index in paths_dict[triple_test_index].keys():
-            # RECALL
-            # predizioni totali/predizioni con almeno un path di spiegazione (il quale è vincolato ad avere almeno un supporto)
-            predictions += 1  # serve il totale delle predizioni
+            # RECALL = |predictions|/|predictions with at least one explanation path|
+            predictions += 1
             explanations = paths_dict[triple_test_index][pred_index]
             if explanations != {None}:
                 predictions_with_expl += 1
-                # siamo nel dizionario che contiene le diverse tipologie di path
-                # print(explanations)
                 for type in explanations.keys():
-                    if explanations[type]:  # = se non è vuota la lista di quella tipologia di spiegazioni
-                        # print(f"Type {type}:")
-                        # [print(e) for e in explanations[type]]
+                    if explanations[type]:
                         num_expl = 0  # number of explanations of this type for the given prediction
-                        for e in explanations[
-                            type]:  # per ogni spiegazione prendo il supporto ottenuto, che sarà almeno 1
+                        for e in explanations[type]:
                             num_expl += 1
                             try:
-                                supp_per_type[type] += len(
-                                    e.support_paths)  # qui conta quanto supporto per questo tipo per questa spiegazione, che si somma al totale supporti di questa tipologia
+                                supp_per_type[type] += len(e.support_paths)  # counts how much support of this type for this explanation, which is summed to the total amount of supports for this typology
                             except KeyError:
-                                # dizionario alla prima iterazione
                                 supp_per_type[type] = len(e.support_paths)
                         try:
-                            expl_per_type[type] += num_expl  # tutte le spiegazioni di questo tipo
+                            expl_per_type[type] += num_expl  # all the explanations of this type
                         except KeyError:
                             expl_per_type[type] = num_expl
 
     recall = predictions_with_expl / predictions
-    # print(recall)
 
-    # avg support
-    # supporto medio sulle triple per cui vi è almeno una spiegazione
+    # avg support on the triples for which thes is at least one explanation
     avg_supp_per_type = {}
     for type in expl_per_type.keys():
         avg_supp_per_type[type] = supp_per_type[type] / expl_per_type[type]
@@ -573,8 +527,8 @@ def evaluation(paths_dict=None):
 
 def main_process(data: DataManager, num_tripla: int, explainer: Explainer, return_dict, args):
     """
-    Processo adibito alla generazione di spiegazioni per la tripla num_tripla; utilizzato in multiprocessing per parallelizzare
-    la generazione di spiegazioni per più triple contemporaneamente
+    Process that generates explanation for the triple num_tripla; used in multiprocessing to parallelize the generation
+    of explanation for more triples at the same time
     :param data:
     :param num_tripla:
     :param explainer:
@@ -583,8 +537,6 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     """
     log = Log.get_logger()
     tripla_test = data.test_triples[num_tripla]
-    log.info(f"Processing predictions for test triple: {tripla_test}")
-    # ids
     test_head_id = tripla_test[0]
     rel_id = tripla_test[2]
     # embeddings of the test triple
@@ -594,18 +546,17 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
     inv_rel_emb = data.inv_rel[rel_id]"""
     ## TAIL PREDICTION EXPLANATION
     tail_predictions = data.test_predicted_tails[num_tripla]
-    # similarità con il rel_emb della tripla
+    # similarity with the triple relational embedding
     sim_rels = explainer.top_sim_emb(rel_id, data.relations_similarities_dict, top_k=args.top_rel)
     sim_heads = explainer.top_sim_emb(test_head_id, data.entities_similarities_dict, top_k=args.top_ent)
 
-    paths_for_pred = {}  # dict contenente {num_pred: paths, num_pred1: path1} k = indice per tail_predictions, v = prediction_paths
-
+    paths_for_pred = {}  # dict having {num_pred: paths, num_pred1: path1} k = index for tail_predictions, v = prediction_paths
     for num_pred in range(0, len(tail_predictions)):
         predicted_tail_id = tail_predictions[num_pred]
-        # le code simili servono per la ricerca di spiegazioni a supporto
+        # similar tails are used for searching for support explanations
         sim_tails = explainer.top_sim_emb(predicted_tail_id, data.entities_similarities_dict,
                                           top_k=args.top_ent)
-        # dunque cercare spiegazione per (head_id, pred_tail, rel_id)
+        # look for explanation for (head_id, pred_tail, rel_id)
         paths_for_pred[num_pred] = explainer.paths(test_head_id, rel_id, sim_rels, predicted_tail_id,
                                                    [data.train_hr_t, data.train_tr_h], sim_heads, sim_tails, args)
 
@@ -613,15 +564,15 @@ def main_process(data: DataManager, num_tripla: int, explainer: Explainer, retur
 
 
 def main(manager):
-    dataset = DataManager(args.data_dir, args.pred_perc)
+    dataset = DataManager(args.data_dir, args.pred_perc, args.clustering)
+    print(len(dataset.test_triples))
     log.info('Data loaded')
     log.info(
         "NB: triples expressed in the form [h,t,r], but explanations and paths will be in the canonical form [h,r,t]\n")
     explainer = Explainer()
-    if args.multiproc_flag:  # se è abilitato il multiprocessing
+    if args.multiproc_flag: # If multiprocessing is enabled
         paths_dictionary = manager.dict()
         jobs = []
-        # {num_tripla: {num_predizione: {paths} } }
         max_processes = args.max_processes
         actual_processes = 0
         for num_tripla in range(0, len(dataset.test_triples)):
@@ -629,28 +580,31 @@ def main(manager):
                                         args=(dataset, num_tripla, explainer, paths_dictionary, args))
             jobs.append(p)
             p.start()
-            multiprocessing.Process  # dovrebbe evitare consumo eccessivo di ram in linux https://stackoverflow.com/a/14750086/9748304
+            multiprocessing.Process  # should prevent excessive RAM waste in Linux https://stackoverflow.com/a/14750086/9748304
             actual_processes += 1
-            # paths_dictionary[num_tripla] = paths_for_pred
             if actual_processes == max_processes:
                 for proc in jobs:
                     proc.join()
                 actual_processes = 0
                 jobs = []
 
-        if jobs:  # se ce ne sono ancora da concludere
+        if jobs:
             for proc in jobs:
                 proc.join()
 
-    else:  # senza multiprocessing
+    else:
         paths_dictionary = dict()
-        for num_tripla in range(0, len(dataset.test_triples)):
+        for num_tripla in tqdm(range(0, len(dataset.test_triples))):
             main_process(dataset, num_tripla, explainer, paths_dictionary, args)
 
     log.info("Explanations computed.")
     log.info("Computing the performances evaluation")
 
     recall, avg_sup_type = evaluation(paths_dictionary)
+    with open("results.txt", "w") as f:
+        f.write(f"Recall: {recall}")
+        f.write(f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
+
     log.info(f"Recall: {recall}")
     log.info(
         f"Avg support for each type of explantion (average support for each explanation, averaged for each type: {avg_sup_type}")
@@ -697,6 +651,11 @@ if __name__ == '__main__':
                         help='choose the pre-computed distance/similarity to involve: euclidian, cosine',
                         default='euclidian')
 
+    parser.add_argument('--clustering', dest='clustering', type=str,
+                        help='Name of the folder containing the similarities files obtained through clustering. If you'
+                             'don\t want to use clustering, leave this argument as none',
+                        default=None)
+
     parser.add_argument('--pretty_print', dest='pretty_print_flag', type=bool,
                         help='if true, enable the pretty print of the explanations on the log file (requires much time',
                         default=False)
@@ -721,8 +680,8 @@ if __name__ == '__main__':
     log.info("SAVE DIR: %s" % args.save_dir)
     log.info("PERCENTAGE OF PREDICTIONS: %s" % args.pred_perc)
     log.info("DISTANCE TYPE: %s" % args.distance_type)
-    global manager  # dovrebbe aiutare con la interruzione prematura dei processi
+    global manager  # should help with premature termination of processes
     manager = multiprocessing.Manager()  # manager for the shared dict in multiprocessing
-    start_time = time.time()  # better for windows, more accuracy
     main(manager)
-    log.debug("--- %s seconds ---" % (time.time() - start_time))
+
+# python3 explanation/explanation.py --data ./save/FB15K/out_data/pickle/ --clustering agglomerative/10 --save_dir explanation/results/WN18/euclidian/8kmeans/2perc/ --distance euclidian --predictions_perc 2
